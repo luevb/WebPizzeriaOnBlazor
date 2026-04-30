@@ -14,13 +14,13 @@ public class CartItem
 
 public class CartService
 {
-    private readonly ProtectedLocalStorage _storage;
+    private readonly ProtectedSessionStorage _storage;
     private List<CartItem> _items = new();
     private bool _isInitialized = false;
 
     public event Action? OnChange;
 
-    public CartService(ProtectedLocalStorage storage)
+    public CartService(ProtectedSessionStorage storage)
     {
         _storage = storage;
     }

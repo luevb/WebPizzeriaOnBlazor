@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddHttpClient<DadataService>();
 builder.Services.AddScoped<DadataService>();
-builder.Services.AddScoped<ProtectedLocalStorage>();
+builder.Services.AddScoped<ProtectedSessionStorage>(); 
 builder.Services.AddRazorComponents()   
     .AddInteractiveServerComponents();
 builder.Services.AddMudServices();
