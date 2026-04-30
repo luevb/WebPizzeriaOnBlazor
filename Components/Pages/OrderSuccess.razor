@@ -1,0 +1,16 @@
+﻿@page "/order-success"
+@using MudBlazor
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="my-8">
+    <MudCard>
+        <MudCardContent Class="text-center">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+            <MudText Typo="Typo.h4" Class="mt-3">Заказ принят!</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2">Спасибо за заказ. Наш оператор свяжется с вами для подтверждения.</MudText>
+            <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Class="mt-4" OnClick="@(() => Navigation.NavigateTo("/menu/pizzas"))">
+                Продолжить покупки
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>

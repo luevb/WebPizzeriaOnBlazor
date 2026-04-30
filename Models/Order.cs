@@ -1,4 +1,4 @@
-﻿namespace BlazorPizzeria.Models;
+﻿using BlazorPizzeria.Models;
 
 public class Order
 {

@@ -1,0 +1,158 @@
+﻿@page "/checkout"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inject DadataService Dadata
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject CartService Cart
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
+    <MudText Typo="Typo.h4" Class="mb-4">📝 Оформление заказа</MudText>
+
+    @if (Cart.Items.Count == 0)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Корзина пуста. <MudLink Href="/menu/pizzas" Underline="Underline.Always">Перейти к меню</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="mb-3">Контактные данные</MudText>
+                        <EditForm Model="@order" OnValidSubmit="SubmitOrder" FormName="checkout">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <MudTextField @bind-Value="order.CustomerName"
+                                          Label="Ваше имя"
+                                          Variant="@Variant.Outlined"
+                                          Required="true" />
+
+                            <MudTextField @bind-Value="order.Phone"
+                                          Label="Телефон"
+                                          Variant="@Variant.Outlined"
+                                          Required="true" />
+
+                            <MudAutocomplete T="string"
+                                             Label="Адрес доставки"
+                                             @bind-Value="order.Address"
+                                             SearchFunc="@SearchAddress"
+                                             Variant="@Variant.Outlined"
+                                             Required="true"
+                                             ResetValueOnEmptyText="true"
+                                             CoerceText="true"
+                                             CoerceValue="true"
+                                             Placeholder="Начните вводить улицу и дом" />
+
+                            <MudButton Variant="@Variant.Filled"
+                                       Color="@Color.Primary"
+                                       Type="Submit"
+                                       FullWidth="true"
+                                       Class="mt-4">
+                                Подтвердить заказ
+                            </MudButton>
+                        </EditForm>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="5">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="mb-3">Ваш заказ</MudText>
+                        <MudTable Items="@Cart.Items" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Товар</MudTh>
+                                <MudTh>Кол-во</MudTh>
+                                <MudTh>Сумма</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.Name</MudTd>
+                                <MudTd>@context.Quantity</MudTd>
+                                <MudTd>@(context.Price* context.Quantity) ₽</MudTd>
+                            </RowTemplate>
+                            <FooterContent>
+                                <MudTr>
+                                    <MudTd colspan="2"><strong>Итого:</strong></MudTd>
+                                    <MudTd><strong>@Cart.TotalPrice ₽</strong></MudTd>
+                                </MudTr>
+                            </FooterContent>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private async Task<IEnumerable<string>> SearchAddress(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 3)
+            return new List<string>();
+        return await Dadata.SuggestAddressAsync(value);
+    }
+    private Order order = new();
+
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
+    private async Task SubmitOrder()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            order.OrderDate = DateTime.Now;
+            order.TotalPrice = Cart.TotalPrice;
+            order.Status = "Pending";
+
+            foreach (var item in Cart.Items)
+            {
+                var orderItem = new OrderItem
+                {
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price
+                };
+                switch (item.ProductType)
+                {
+                    case "Pizza":
+                        orderItem.PizzaId = item.ProductId;
+                        break;
+                    case "Drink":
+                        orderItem.DrinkId = item.ProductId;
+                        break;
+                    case "Dessert":
+                        orderItem.DessertId = item.ProductId;
+                        break;
+                }
+                order.OrderItems.Add(orderItem);
+            }
+
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
+
+            Cart.Clear();
+            Snackbar.Add("Заказ успешно оформлен!", Severity.Success);
+            Navigation.NavigateTo("/order-success");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}

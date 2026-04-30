@@ -1,12 +1,13 @@
 ﻿@inherits LayoutComponentBase
 
-@* Обязательные провайдеры MudBlazor для тем, диалогов и уведомлений *@
+@* Обязательные провайдеры MudBlazor для тем, диалогов, уведомлений и поповеров *@
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<MudPopoverProvider />   @* <--- ЭТО СТРОКА, КОТОРУЮ НАДО ДОБАВИТЬ *@
 
 <MudLayout>
-    @* Верхняя панель (AppBar) с гамбургер-кнопкой и заголовком *@
+    @* Верхняя панель (AppBar) *@
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@(_isDarkMode? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        OnClick="ToggleDarkMode"
@@ -18,31 +19,24 @@
             La pizza di Don Corleone - настоящая итальянская пицца!
         </MudText>
         <MudSpacer />
-        @* Можно добавить дополнительные кнопки справа *@
         <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
     </MudAppBar>
 
-    @* Боковой drawer (меню), открывается/закрывается через привязку к полю _drawerOpen *@
     <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
-        @* Здесь подключаем наш компонент навигации *@
         <NavMenu />
     </MudDrawer>
 
-    @* Основная область контента *@
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
-            @* Сюда подставляется текущая страница *@
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
 
 @code {
-    // Меню
     private bool _drawerOpen = true;
     private void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
-    // Для темы
     private MudTheme _theme = new();
     private bool _isDarkMode = true;
 

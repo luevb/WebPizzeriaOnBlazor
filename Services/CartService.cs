@@ -12,9 +12,6 @@ public class CartItem
     public int Quantity { get; set; }
 }
 
-/// <summary>
-/// Сервис корзины товаров. Хранит список выбранных товаров и предоставляет методы для управления.
-/// </summary>
 public class CartService
 {
     private List<CartItem> _items = new();
@@ -30,21 +27,13 @@ public class CartService
     /// </summary>
     public IReadOnlyList<CartItem> Items => _items;
 
-    /// <summary>
-    /// Общее количество товаров (сумма всех Quantity).
-    /// </summary>
     public int TotalCount => _items.Sum(i => i.Quantity);
-
-    /// <summary>
-    /// Общая стоимость корзины.
-    /// </summary>
     public decimal TotalPrice => _items.Sum(i => i.Price * i.Quantity);
 
     /// <summary>
     /// Возвращает количество единиц указанного товара в корзине.
     /// </summary>
-    /// <param name="productType">Тип продукта (Pizza, Drink, Dessert)</param>
-    /// <param name="productId">Идентификатор продукта</param>
+
     public int GetQuantity(string productType, int productId)
     {
         var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
@@ -103,9 +92,6 @@ public class CartService
         if (removed) OnChange?.Invoke();
     }
 
-    /// <summary>
-    /// Полностью очищает корзину.
-    /// </summary>
     public void Clear()
     {
         if (_items.Count > 0)
