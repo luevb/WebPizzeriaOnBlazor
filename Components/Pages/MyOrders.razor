@@ -1,0 +1,134 @@
+﻿@page "/my-orders"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="my-8">
+    <MudText Typo="Typo.h4" Class="mb-4">Мои заказы</MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudTextField @bind-Value="_phoneNumber"
+                          Label="Введите номер телефона"
+                          Variant="@Variant.Outlined"
+                          Placeholder="+7 XXX XXX-XX-XX" />
+            <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Class="mt-3" OnClick="LoadOrders">Найти заказы</MudButton>
+        </MudCardContent>
+    </MudCard>
+
+    @if (_orders != null)
+    {
+        if (!_orders.Any())
+        {
+            <MudAlert Severity="@Severity.Info" Class="mt-4">Заказы с таким номером не найдены.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Class="mt-4">Найдено заказов: @_orders.Count</MudText>
+            <MudTable Items="@_orders" Hover="true" Class="mt-3">
+                <HeaderContent>
+                    <MudTh>№</MudTh>
+                    <MudTh>Дата</MudTh>
+                    <MudTh>Сумма</MudTh>
+                    <MudTh>Статус</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Id</MudTd>
+                    <MudTd>@context.OrderDate.ToShortDateString()</MudTd>
+                    <MudTd>@context.TotalPrice ₽</MudTd>
+                    <MudTd>@GetStatusText(context.Status)</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Info" OnClick="() => ShowDetails(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+
+    <!-- Диалог деталей заказа -->
+    <MudDialog @bind-IsVisible="_detailsVisible" Options="_dialogOptions">
+        <Title>Заказ #@_selectedOrder?.Id</Title>
+        <Content>
+            @if (_selectedOrder != null)
+            {
+                <MudText Typo="Typo.body2"><strong>Адрес:</strong> @_selectedOrder.Address</MudText>
+                <MudText Typo="Typo.body2"><strong>Дата:</strong> @_selectedOrder.OrderDate</MudText>
+                <MudText Typo="Typo.body2"><strong>Статус:</strong> @GetStatusText(_selectedOrder.Status)</MudText>
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.subtitle2">Состав заказа:</MudText>
+                <MudTable Items="@_selectedOrder.OrderItems" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Товар</MudTh><MudTh>Кол-во</MudTh><MudTh>Цена</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@GetProductName(context)</MudTd>
+                        <MudTd>@context.Quantity</MudTd>
+                        <MudTd>@context.UnitPrice ₽</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </Content>
+        <Actions>
+            <MudButton OnClick="() => _detailsVisible = false">Закрыть</MudButton>
+        </Actions>
+    </MudDialog>
+</MudContainer>
+
+@code {
+    private string _phoneNumber = "";
+    private List<Order>? _orders;
+    private Order? _selectedOrder;
+    private bool _detailsVisible;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    private async Task LoadOrders()
+    {
+        if (string.IsNullOrWhiteSpace(_phoneNumber))
+        {
+            Snackbar.Add("Введите номер телефона", Severity.Warning);
+            return;
+        }
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _orders = await db.Orders
+            .Where(o => o.Phone == _phoneNumber)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Pizza)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Drink)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Dessert)
+            .OrderByDescending(o => o.Id)
+            .ToListAsync();
+        StateHasChanged();
+    }
+
+    private void ShowDetails(Order order)
+    {
+        _selectedOrder = order;
+        _detailsVisible = true;
+    }
+
+    private static string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "Pending" => "Ожидает",
+            "InProgress" => "Готовится",
+            "Delivered" => "Доставляется",
+            "Completed" => "Выполнен",
+            "Cancelled" => "Отменён",
+            _ => status
+        };
+    }
+
+    private string GetProductName(OrderItem item)
+    {
+        if (item.Pizza != null) return item.Pizza.Name;
+        if (item.Drink != null) return item.Drink.Name;
+        if (item.Dessert != null) return item.Dessert.Name;
+        return "Товар";
+    }
+}
