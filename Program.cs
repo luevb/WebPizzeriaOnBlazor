@@ -1,6 +1,7 @@
 using BlazorPizzeria.Components;
 using BlazorPizzeria.Data;
 using BlazorPizzeria.Services;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 
@@ -9,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddHttpClient<DadataService>();
 builder.Services.AddScoped<DadataService>();
+builder.Services.AddScoped<ProtectedLocalStorage>();
 builder.Services.AddRazorComponents()   
     .AddInteractiveServerComponents();
 builder.Services.AddMudServices();

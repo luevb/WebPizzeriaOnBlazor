@@ -1,10 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@inject CartService Cart
 
 @* Обязательные провайдеры MudBlazor для тем, диалогов, уведомлений и поповеров *@
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
-<MudPopoverProvider />   @* <--- ЭТО СТРОКА, КОТОРУЮ НАДО ДОБАВИТЬ *@
+<MudPopoverProvider />
 
 <MudLayout>
     @* Верхняя панель (AppBar) *@
@@ -35,10 +36,16 @@
 
 @code {
     private bool _drawerOpen = true;
-    private void DrawerToggle() => _drawerOpen = !_drawerOpen;
-
     private MudTheme _theme = new();
     private bool _isDarkMode = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем корзину из localStorage при старте приложения
+        await Cart.LoadCartAsync();
+    }
+
+    private void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
     private void ToggleDarkMode()
     {

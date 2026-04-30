@@ -1,11 +1,11 @@
-﻿namespace BlazorPizzeria.Services;
+﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using System.Text.Json;
 
-/// <summary>
-/// Представляет один товар в корзине.
-/// </summary>
+namespace BlazorPizzeria.Services;
+
 public class CartItem
 {
-    public string ProductType { get; set; } = string.Empty; // "Pizza", "Drink", "Dessert"
+    public string ProductType { get; set; } = string.Empty;
     public int ProductId { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
@@ -14,35 +14,54 @@ public class CartItem
 
 public class CartService
 {
+    private readonly ProtectedLocalStorage _storage;
     private List<CartItem> _items = new();
+    private bool _isInitialized = false;
 
-    /// <summary>
-    /// Событие, вызываемое при любом изменении содержимого корзины.
-    /// Подписывайтесь на него, чтобы обновлять интерфейс.
-    /// </summary>
     public event Action? OnChange;
 
-    /// <summary>
-    /// Возвращает все позиции в корзине (только для чтения).
-    /// </summary>
-    public IReadOnlyList<CartItem> Items => _items;
+    public CartService(ProtectedLocalStorage storage)
+    {
+        _storage = storage;
+    }
 
+    public IReadOnlyList<CartItem> Items => _items;
     public int TotalCount => _items.Sum(i => i.Quantity);
     public decimal TotalPrice => _items.Sum(i => i.Price * i.Quantity);
 
-    /// <summary>
-    /// Возвращает количество единиц указанного товара в корзине.
-    /// </summary>
-
     public int GetQuantity(string productType, int productId)
     {
-        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
-        return item?.Quantity ?? 0;
+        return _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId)?.Quantity ?? 0;
     }
 
     /// <summary>
-    /// Добавляет указанное количество товара в корзину. Если товар уже есть, увеличивает количество.
+    /// Загружает корзину из localStorage при запуске приложения.
     /// </summary>
+    public async Task LoadCartAsync()
+    {
+        if (_isInitialized) return;
+        try
+        {
+            var result = await _storage.GetAsync<string>("cart");
+            if (result.Success && !string.IsNullOrEmpty(result.Value))
+            {
+                _items = JsonSerializer.Deserialize<List<CartItem>>(result.Value) ?? new List<CartItem>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки корзины: {ex.Message}");
+        }
+        _isInitialized = true;
+        OnChange?.Invoke();
+    }
+
+    private async Task SaveCartAsync()
+    {
+        var json = JsonSerializer.Serialize(_items);
+        await _storage.SetAsync("cart", json);
+    }
+
     public void AddItem(string productType, int productId, string name, decimal price, int quantity = 1)
     {
         var existing = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
@@ -50,13 +69,10 @@ public class CartService
             existing.Quantity += quantity;
         else
             _items.Add(new CartItem { ProductType = productType, ProductId = productId, Name = name, Price = price, Quantity = quantity });
-
-        OnChange?.Invoke(); // Уведомляем об изменении
+        OnChange?.Invoke();
+        _ = SaveCartAsync(); // фоном сохраняем
     }
 
-    /// <summary>
-    /// Увеличивает количество товара на 1.
-    /// </summary>
     public void IncreaseQuantity(string productType, int productId)
     {
         var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
@@ -64,12 +80,10 @@ public class CartService
         {
             item.Quantity++;
             OnChange?.Invoke();
+            _ = SaveCartAsync();
         }
     }
 
-    /// <summary>
-    /// Уменьшает количество товара на 1. Если количество становится 0, товар полностью удаляется из корзины.
-    /// </summary>
     public void DecreaseQuantity(string productType, int productId)
     {
         var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
@@ -80,16 +94,18 @@ public class CartService
             else
                 _items.Remove(item);
             OnChange?.Invoke();
+            _ = SaveCartAsync();
         }
     }
 
-    /// <summary>
-    /// Полностью удаляет указанный товар из корзины (независимо от его количества).
-    /// </summary>
     public void RemoveItem(string productType, int productId)
     {
         var removed = _items.RemoveAll(i => i.ProductType == productType && i.ProductId == productId) > 0;
-        if (removed) OnChange?.Invoke();
+        if (removed)
+        {
+            OnChange?.Invoke();
+            _ = SaveCartAsync();
+        }
     }
 
     public void Clear()
@@ -98,6 +114,7 @@ public class CartService
         {
             _items.Clear();
             OnChange?.Invoke();
+            _ = SaveCartAsync();
         }
     }
 }
