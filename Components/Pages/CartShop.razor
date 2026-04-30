@@ -1,0 +1,72 @@
+﻿@page "/cart"
+@using BlazorPizzeria.Services
+@inject CartService Cart
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
+    <MudText Typo="Typo.h4" Class="text">🛒 Корзина</MudText>
+
+    @if (Cart.Items.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
+            Корзина пуста.
+            <MudLink Href="/menu/pizzas" Underline="Underline.Always">Перейти к меню</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable Items="@Cart.Items" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="2">
+            <HeaderContent>
+                <MudTh>Товар</MudTh>
+                <MudTh>Цена</MudTh>
+                <MudTh>Кол-во</MudTh>
+                <MudTh>Сумма</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Товар">@context.Name</MudTd>
+                <MudTd DataLabel="Цена">@context.Price ₽</MudTd>
+                <MudTd DataLabel="Кол-во">@context.Quantity</MudTd>
+                <MudTd DataLabel="Сумма">@(context.Price* context.Quantity) ₽</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="() => Cart.RemoveItem(context.ProductType, context.ProductId)" />
+                </MudTd>
+            </RowTemplate>
+            <FooterContent>
+                <MudTr>
+                    <MudTd colspan="3"><MudText Typo="Typo.h6">Итого:</MudText></MudTd>
+                    <MudTd colspan="2"><MudText Typo="Typo.h6">@Cart.TotalPrice ₽</MudText></MudTd>
+                </MudTr>
+            </FooterContent>
+        </MudTable>
+
+        <MudGrid Justify="Justify.FlexEnd" Class="mt-4">
+            <MudItem xs="12" sm="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="GoToCheckout">
+                    Оформить заказ
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
+    private void GoToCheckout()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}

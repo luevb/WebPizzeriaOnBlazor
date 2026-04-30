@@ -1,0 +1,33 @@
+﻿@page "/gallery"
+@using MudBlazor
+
+<MudText Typo="Typo.h5" GutterBottom="true">Моя динамическая галерея</MudText>
+
+<MudGrid>
+    @foreach (var photo in photos)
+    {
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudCard>
+                <MudCardMedia Image="@photo.Url" Height="200" />
+                <MudCardContent>
+                    <MudText Typo="Typo.h6">@photo.Title</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private List<Photo> photos = new List<Photo>
+    {
+        new Photo { Url = "images/photo1.jpg", Title = "Пляж" },
+        new Photo { Url = "images/photo2.jpg", Title = "Горы" },
+        // Добавьте сюда новые объекты Photo для отображения
+    };
+
+    private class Photo
+    {
+        public string Url { get; set; }
+        public string Title { get; set; }
+    }
+}

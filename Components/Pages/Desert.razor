@@ -1,0 +1,100 @@
+﻿@page "/menu/deserts"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject CartService Cart
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
+    <MudText Typo="Typo.h4" Class="mb-4">🍰 Десерты</MudText>
+
+    @if (desserts == null)
+    {
+        <MudProgressCircular Indeterminate />
+    }
+    else if (!desserts.Any())
+    {
+        <MudAlert Severity="Severity.Info">Десерты временно отсутствуют.</MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var dessert in desserts)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
+                        @if (!string.IsNullOrEmpty(dessert.ImageUrl))
+                        {
+                            <MudCardMedia Image="@dessert.ImageUrl" Height="150" />
+                        }
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">@dessert.Name</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">@dessert.Description</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">
+                                @dessert.Price ₽ · @dessert.Calories ккал
+                            </MudText>
+
+                            <!-- Кнопочный счётчик -->
+                            <div class="d-flex align-items-center justify-content-between mt-3">
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove"
+                                               Size="Size.Small"
+                                               Color="Color.Secondary"
+                                               OnClick="() => DecrementQuantity(dessert.Id)" />
+                                <MudText Typo="Typo.body1" Class="mx-2" Style="min-width: 30px; text-align: center;">
+                                    @GetQuantity(dessert.Id)
+                                </MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               OnClick="() => IncrementQuantity(dessert.Id)" />
+                            </div>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       FullWidth="true"
+                                       OnClick="() => AddToCart(dessert)">
+                                В корзину
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private List<Dessert> desserts = new();
+    private Dictionary<int, int> quantities = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        desserts = await db.Desserts.ToListAsync();
+
+        foreach (var dessert in desserts)
+            quantities[dessert.Id] = 1;
+    }
+
+    private int GetQuantity(int id) => quantities.GetValueOrDefault(id, 1);
+
+    private void IncrementQuantity(int id)
+    {
+        var current = GetQuantity(id);
+        if (current < 99) quantities[id] = current + 1;
+    }
+
+    private void DecrementQuantity(int id)
+    {
+        var current = GetQuantity(id);
+        if (current > 1) quantities[id] = current - 1;
+    }
+
+    private void AddToCart(Dessert dessert)
+    {
+        int qty = GetQuantity(dessert.Id);
+        Cart.AddItem("Dessert", dessert.Id, dessert.Name, dessert.Price, qty);
+        Snackbar.Add($"{dessert.Name} добавлен в корзину (x{qty})", Severity.Success);
+    }
+}

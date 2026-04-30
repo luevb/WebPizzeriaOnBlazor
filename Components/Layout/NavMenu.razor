@@ -1,0 +1,103 @@
+﻿@inject CartService Cart
+@implements IDisposable
+
+<MudNavMenu>
+    <MudNavGroup Title="Меню" Icon="@Icons.Material.Filled.Menu" Expanded="false">
+        <MudNavLink Href="/menu/pizzas" Icon="@Icons.Material.Filled.LocalPizza">
+            Пицца
+        </MudNavLink>
+
+        <MudNavLink Href="/menu/deserts" Icon="@Icons.Material.Filled.Cake">
+            Десерты
+        </MudNavLink>
+
+        <MudNavLink Href="/menu/drink" Icon="@Icons.Material.Filled.LocalDrink">
+            Напитки
+        </MudNavLink>
+
+    </MudNavGroup>
+
+    <MudNavLink Href="/cart" Icon="@Icons.Material.Filled.ShoppingCartCheckout">
+        <b>Корзина</b>
+        @if (Cart.TotalCount > 0)
+        {
+            <MudBadge Color="Color.Error" Content="@Cart.TotalCount" Overlap="true" />
+        }
+    </MudNavLink>
+
+    <MudNavLink Href="/gallery" Icon="@Icons.Material.Filled.Photo">
+        <b>Профиль</b>
+    </MudNavLink>
+
+    @* Группа Рецепты *@
+    <MudNavGroup Title="Рецепты" Icon="@Icons.Material.Filled.Receipt" Expanded="false">
+
+        <MudNavLink Href="/reciept/margherita" Icon="@Icons.Material.Filled.Receipt">
+            Маргарита
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/cheese" Icon="@Icons.Material.Filled.Receipt">
+            Четыре сыра
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/seasons" Icon="@Icons.Material.Filled.Receipt">
+            Четыре сезона
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/capricciosa" Icon="@Icons.Material.Filled.Receipt">
+            Капричоза
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/diavola" Icon="@Icons.Material.Filled.Receipt">
+            Дьябола
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/hawaiian" Icon="@Icons.Material.Filled.Receipt">
+            Гавайская
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/vegetarian" Icon="@Icons.Material.Filled.Receipt">
+            Вегетарианская
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/calzone" Icon="@Icons.Material.Filled.Receipt">
+            Кальцоне
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/pizzaDon" Icon="@Icons.Material.Filled.Receipt">
+            Фирменная пицца «Пицца Дон»
+        </MudNavLink>
+
+        <MudNavLink Href="/reciept/parma" Icon="@Icons.Material.Filled.Receipt">
+            Пармская
+        </MudNavLink>
+
+    </MudNavGroup>
+    @* Группа Настройки *@
+    <MudNavGroup Title="Настройки" Icon="@Icons.Material.Filled.Settings" Expanded="false">
+        <MudNavLink Href="/settings/profile" Icon="@Icons.Material.Filled.Person">
+            Профиль
+        </MudNavLink>
+
+        <MudNavLink Href="/settings/security" Icon="@Icons.Material.Filled.Security">
+            Безопасность
+        </MudNavLink>
+
+    </MudNavGroup>
+
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Info">
+        <b>О нас</b>
+    </MudNavLink>
+
+</MudNavMenu>
+@code {
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}

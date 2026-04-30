@@ -1,0 +1,33 @@
+﻿@page "/profile"
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Мой профиль</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (!string.IsNullOrEmpty(_profileImage))
+        {
+            <MudImage Class="mt-4" Src="@_profileImage" Style="width: 150px; height: 150px;" />
+        }
+        <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png" FilesChanged="UploadFile">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PhotoCamera">
+                    Загрузить фото профиля
+                </MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private string _profileImage;
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream().ReadAsync(buffer);
+        _profileImage = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
+    }
+}
