@@ -1,0 +1,154 @@
+﻿@page "/admin/orders"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
+    <MudText Typo="Typo.h4" Class="mb-4">📋 Управление заказами</MudText>
+
+    @if (orders == null)
+    {
+        <MudProgressCircular Indeterminate />
+    }
+    else if (!orders.Any())
+    {
+        <MudAlert Severity="Severity.Info">Заказов пока нет.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="@orders" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="2">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>Клиент</MudTh>
+                <MudTh>Телефон</MudTh>
+                <MudTh>Адрес</MudTh>
+                <MudTh>Дата</MudTh>
+                <MudTh>Сумма</MudTh>
+                <MudTh>Статус</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Id</MudTd>
+                <MudTd>@context.CustomerName</MudTd>
+                <MudTd>@context.Phone</MudTd>
+                <MudTd>@context.Address</MudTd>
+                <MudTd>@context.OrderDate.ToShortDateString()</MudTd>
+                <MudTd>@context.TotalPrice ₽</MudTd>
+                <MudTd>
+                    <MudSelect T="string" @bind-Value="@context.Status" Variant="@Variant.Outlined" Size="@Size.Small">
+                        <MudSelectItem Value="@("Pending")">Ожидает</MudSelectItem>
+                        <MudSelectItem Value="@("InProgress")">Готовится</MudSelectItem>
+                        <MudSelectItem Value="@("Delivered")">Доставляется</MudSelectItem>
+                        <MudSelectItem Value="@("Completed")">Выполнен</MudSelectItem>
+                        <MudSelectItem Value="@("Cancelled")">Отменён</MudSelectItem>
+                    </MudSelect>
+                </MudTd>
+                <MudTd>
+                    <MudButton Variant="@Variant.Text" Color="@Color.Primary" Size="@Size.Small" OnClick="@(() => UpdateStatus(context))">Сохранить</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Info" Color="@Color.Primary" Size="@Size.Small" OnClick="@(() => ShowDetails(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+<MudDialog @bind-IsVisible="_dialogVisible" Options="@_dialogOptions">
+    <Title>Детали заказа #@(_selectedOrder?.Id)</Title>
+    <Content>
+        @if (_selectedOrder != null)
+        {
+            <MudText Typo="Typo.h6">Клиент: @_selectedOrder.CustomerName</MudText>
+            <MudText>Телефон: @_selectedOrder.Phone</MudText>
+            <MudText>Адрес: @_selectedOrder.Address</MudText>
+            <MudText>Дата: @_selectedOrder.OrderDate</MudText>
+            <MudText>Статус: @_selectedOrder.Status</MudText>
+            <MudText Typo="Typo.h6" Class="mt-4">Состав заказа:</MudText>
+            <MudTable Items="@(_selectedOrder.OrderItems)" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Товар</MudTh>
+                    <MudTh>Кол-во</MudTh>
+                    <MudTh>Цена</MudTh>
+                    <MudTh>Сумма</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@GetProductName(context)</MudTd>
+                    <MudTd>@context.Quantity</MudTd>
+                    <MudTd>@context.UnitPrice ₽</MudTd>
+                    <MudTd>@(context.Quantity * context.UnitPrice) ₽</MudTd>
+                </RowTemplate>
+                <FooterContent>
+                    <MudTr>
+                        <MudTd colspan="3"><strong>Итого:</strong></MudTd>
+                        <MudTd><strong>@_selectedOrder.TotalPrice ₽</strong></MudTd>
+                    </MudTr>
+                </FooterContent>
+            </MudTable>
+        }
+    </Content>
+    <Actions>
+        <MudButton Variant="@Variant.Filled" Color="@Color.Primary" OnClick="CloseDialog">Закрыть</MudButton>
+    </Actions>
+</MudDialog>
+
+@code {
+    private List<Order> orders = new();
+    private Order? _selectedOrder;
+    private bool _dialogVisible;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        orders = await db.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Pizza)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Drink)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Dessert)
+            .OrderByDescending(o => o.Id)
+            .ToListAsync();
+        StateHasChanged();
+    }
+
+    private async Task UpdateStatus(Order order)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var dbOrder = await db.Orders.FindAsync(order.Id);
+        if (dbOrder != null)
+        {
+            dbOrder.Status = order.Status;
+            await db.SaveChangesAsync();
+            Snackbar.Add($"Статус заказа #{order.Id} изменён на '{order.Status}'", Severity.Info);
+            await LoadOrders(); // обновить список
+        }
+    }
+
+    private void ShowDetails(Order order)
+    {
+        _selectedOrder = order;
+        _dialogVisible = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogVisible = false;
+        _selectedOrder = null;
+    }
+
+    private string GetProductName(OrderItem item)
+    {
+        if (item.Pizza != null) return item.Pizza.Name;
+        if (item.Drink != null) return item.Drink.Name;
+        if (item.Dessert != null) return item.Dessert.Name;
+        return "Товар";
+    }
+}

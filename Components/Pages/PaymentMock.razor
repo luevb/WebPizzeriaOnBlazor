@@ -1,0 +1,46 @@
+﻿@page "/payment/{OrderId:int}"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="my-8">
+    <MudCard>
+        <MudCardContent Class="text-center">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h4" Class="mt-3">Оплата заказа #@OrderId</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2">Сумма к оплате: <strong>@(order?.TotalPrice ?? 0) ₽</strong></MudText>
+            <MudText Typo="Typo.body2" Class="mt-4">После нажатия кнопки произойдёт списание средств (демо-режим).</MudText>
+
+            <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Class="mt-4" OnClick="ProcessPayment" FullWidth="true">
+                Оплатить @(order?.TotalPrice) ₽
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+    private Order? order;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        order = await db.Orders.FindAsync(OrderId);
+        if (order == null)
+        {
+            Snackbar.Add("Заказ не найден", Severity.Error);
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task ProcessPayment()
+    {
+        // Имитация оплаты – просто задержка
+        await Task.Delay(1000);
+        Snackbar.Add("Оплата прошла успешно!", Severity.Success);
+        Navigation.NavigateTo($"/order-success/{OrderId}");
+    }
+}

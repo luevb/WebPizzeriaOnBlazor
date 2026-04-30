@@ -3,7 +3,6 @@
 @using BlazorPizzeria.Services
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
-@inject DadataService Dadata
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject CartService Cart
 @inject NavigationManager Navigation
@@ -26,30 +25,28 @@
                 <MudCard>
                     <MudCardContent>
                         <MudText Typo="Typo.h6" Class="mb-3">Контактные данные</MudText>
-                        <EditForm Model="@order" OnValidSubmit="SubmitOrder" FormName="checkout">
+                        <EditForm Model="@order" OnValidSubmit="@SubmitOrder" FormName="checkout">
                             <DataAnnotationsValidator />
                             <ValidationSummary />
 
                             <MudTextField @bind-Value="order.CustomerName"
                                           Label="Ваше имя"
                                           Variant="@Variant.Outlined"
+                                          For="@(() => order.CustomerName)"
                                           Required="true" />
 
                             <MudTextField @bind-Value="order.Phone"
                                           Label="Телефон"
                                           Variant="@Variant.Outlined"
+                                          For="@(() => order.Phone)"
                                           Required="true" />
 
-                            <MudAutocomplete T="string"
-                                             Label="Адрес доставки"
-                                             @bind-Value="order.Address"
-                                             SearchFunc="@SearchAddress"
-                                             Variant="@Variant.Outlined"
-                                             Required="true"
-                                             ResetValueOnEmptyText="true"
-                                             CoerceText="true"
-                                             CoerceValue="true"
-                                             Placeholder="Начните вводить улицу и дом" />
+                            <MudTextField @bind-Value="order.Address"
+                                          Label="Адрес доставки"
+                                          Variant="@Variant.Outlined"
+                                          For="@(() => order.Address)"
+                                          Required="true"
+                                          Lines="2" />
 
                             <MudButton Variant="@Variant.Filled"
                                        Color="@Color.Primary"
@@ -93,12 +90,6 @@
 </MudContainer>
 
 @code {
-    private async Task<IEnumerable<string>> SearchAddress(string value, CancellationToken token)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Length < 3)
-            return new List<string>();
-        return await Dadata.SuggestAddressAsync(value);
-    }
     private Order order = new();
 
     protected override void OnInitialized()
@@ -108,6 +99,15 @@
 
     private async Task SubmitOrder()
     {
+        // Дополнительная проверка на случай, если валидация не сработала
+        if (string.IsNullOrWhiteSpace(order.CustomerName) ||
+            string.IsNullOrWhiteSpace(order.Phone) ||
+            string.IsNullOrWhiteSpace(order.Address))
+        {
+            Snackbar.Add("Заполните все поля!", Severity.Warning);
+            return;
+        }
+
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
@@ -142,8 +142,8 @@
             await db.SaveChangesAsync();
 
             Cart.Clear();
-            Snackbar.Add("Заказ успешно оформлен!", Severity.Success);
-            Navigation.NavigateTo("/order-success");
+            Snackbar.Add("Заказ оформлен! Перенаправление на оплату...", Severity.Success);
+            Navigation.NavigateTo($"/payment/{order.Id}");
         }
         catch (Exception ex)
         {

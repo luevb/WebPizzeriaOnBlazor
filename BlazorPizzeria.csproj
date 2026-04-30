@@ -31,6 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Components\Pages\Menu\" />
+    <Folder Include="Components\Pages\Reciepts\" />
     <Folder Include="wwwroot\images\pizzas\" />
     <Folder Include="wwwroot\images\drinks\" />
     <Folder Include="wwwroot\images\desserts\" />
