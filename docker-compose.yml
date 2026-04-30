@@ -1,12 +1,15 @@
 version: '3.8'
+
 services:
-  web:
-    build: .
+  pizzeria:
+    image: donfias/my_web_projects:latest
+    container_name: pizzeria
     ports:
       - "8020:8080"
+    restart: unless-stopped
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Data Source=/app/data/pizzeria.db
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
     volumes:
       - sqlite_data:/app/data
 volumes:
