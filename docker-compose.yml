@@ -1,16 +1,24 @@
 version: '3.8'
 
 services:
-  pizzeria:
-    image: donfias/my_web_projects:latest
-    container_name: pizzeria
+  web:
+    image: donfias/img_pizzeria:1.0
+    container_name: web_pizzeria
     ports:
-      - "8020:8080"
-    restart: unless-stopped
+      - "8020:8080"    
     environment:
-      - ASPNETCORE_URLS=http://+:8080
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/pizzeria.db    
     volumes:
-      - sqlite_data:/app/data
+      - sqlite_data:/app/data    
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   sqlite_data:
+    name: blazorpizzeria_data

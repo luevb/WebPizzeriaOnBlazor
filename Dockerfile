@@ -1,25 +1,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-
-COPY ["BlazorPizzeria.csproj", "."]
-RUN dotnet restore "BlazorPizzeria.csproj"
-
+COPY BlazorPizzeria.csproj .
+RUN dotnet restore
 COPY . .
-RUN dotnet build "BlazorPizzeria.csproj" -c Release -o /app/build
+RUN dotnet publish -c Release -o /app/publish
 
-FROM build AS publish
-RUN dotnet publish "BlazorPizzeria.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
-
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
-USER appuser
-
-COPY --from=publish /app/publish .
-
+COPY --from=build /app/publish .
+# Создаём папку для базы данных (SQLite)
+RUN mkdir -p /app/data
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-
 ENTRYPOINT ["dotnet", "BlazorPizzeria.dll"]
