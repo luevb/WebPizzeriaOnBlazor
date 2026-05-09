@@ -8,6 +8,7 @@ public class CartItem
     public string ProductType { get; set; } = string.Empty;
     public int ProductId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? SelectedSize { get; set; }
     public decimal Price { get; set; }
     public int Quantity { get; set; }
 }
@@ -29,14 +30,12 @@ public class CartService
     public int TotalCount => _items.Sum(i => i.Quantity);
     public decimal TotalPrice => _items.Sum(i => i.Price * i.Quantity);
 
-    public int GetQuantity(string productType, int productId)
+    public int GetQuantity(string productType, int productId, string? size = null)
     {
-        return _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId)?.Quantity ?? 0;
+        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId && i.SelectedSize == size);
+        return item?.Quantity ?? 0;
     }
 
-    /// <summary>
-    /// Загружает корзину из localStorage при запуске приложения.
-    /// </summary>
     public async Task LoadCartAsync()
     {
         if (_isInitialized) return;
@@ -62,20 +61,20 @@ public class CartService
         await _storage.SetAsync("cart", json);
     }
 
-    public void AddItem(string productType, int productId, string name, decimal price, int quantity = 1)
+    public void AddItem(string productType, int productId, string name, decimal price, int quantity = 1, string? size = null)
     {
-        var existing = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
+        var existing = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId && i.SelectedSize == size);
         if (existing != null)
             existing.Quantity += quantity;
         else
-            _items.Add(new CartItem { ProductType = productType, ProductId = productId, Name = name, Price = price, Quantity = quantity });
+            _items.Add(new CartItem { ProductType = productType, ProductId = productId, Name = name, SelectedSize = size, Price = price, Quantity = quantity });
         OnChange?.Invoke();
-        _ = SaveCartAsync(); // фоном сохраняем
+        _ = SaveCartAsync();
     }
 
-    public void IncreaseQuantity(string productType, int productId)
+    public void IncreaseQuantity(string productType, int productId, string? size = null)
     {
-        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
+        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId && i.SelectedSize == size);
         if (item != null)
         {
             item.Quantity++;
@@ -84,9 +83,9 @@ public class CartService
         }
     }
 
-    public void DecreaseQuantity(string productType, int productId)
+    public void DecreaseQuantity(string productType, int productId, string? size = null)
     {
-        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId);
+        var item = _items.FirstOrDefault(i => i.ProductType == productType && i.ProductId == productId && i.SelectedSize == size);
         if (item != null)
         {
             if (item.Quantity > 1)
@@ -98,14 +97,11 @@ public class CartService
         }
     }
 
-    public void RemoveItem(string productType, int productId)
+    public void RemoveItem(string productType, int productId, string? size = null)
     {
-        var removed = _items.RemoveAll(i => i.ProductType == productType && i.ProductId == productId) > 0;
-        if (removed)
-        {
-            OnChange?.Invoke();
-            _ = SaveCartAsync();
-        }
+        var removed = _items.RemoveAll(i => i.ProductType == productType && i.ProductId == productId && i.SelectedSize == size) > 0;
+        if (removed) OnChange?.Invoke();
+        _ = SaveCartAsync();
     }
 
     public void Clear()

@@ -9,18 +9,31 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
     <MudText Typo="Typo.h4">🍕 Пицца</MudText>
 
+    <!-- Панель фильтрации -->
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudTextField @bind-Value="_searchTerm"
+                          Label="Поиск по названию или описанию"
+                          Variant="@Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Clearable="true" />
+        </MudItem>
+    </MudGrid>
+
     @if (pizzas == null)
     {
         <MudProgressCircular Indeterminate />
     }
-    else if (!pizzas.Any())
+    else if (!filteredPizzas.Any())
     {
-        <MudAlert Severity="Severity.Info">Пиццы временно отсутствуют.</MudAlert>
+        <MudAlert Severity="Severity.Info">Пиццы не найдены. Попробуйте изменить фильтры.</MudAlert>
     }
     else
     {
         <MudGrid>
-            @foreach (var pizza in pizzas)
+            @foreach (var pizza in filteredPizzas)
             {
                 <MudItem xs="12" sm="6" md="4" lg="3">
                     <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
@@ -38,8 +51,6 @@
                                     <MudBadge Color="Color.Success" Class="ms-2">Вегетарианская</MudBadge>
                                 }
                             </MudText>
-
-                            <!-- Кнопочный счётчик -->
                             <div class="d-flex align-items-center justify-content-between mt-3">
                                 <MudIconButton Icon="@Icons.Material.Filled.Remove"
                                                Size="Size.Small"
@@ -55,7 +66,7 @@
                             </div>
                         </MudCardContent>
                         <MudCardActions>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                            <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
                                        FullWidth="true"
                                        OnClick="() => AddToCart(pizza)">
                                 В корзину
@@ -71,12 +82,20 @@
 @code {
     private List<Pizza> pizzas = new();
     private Dictionary<int, int> quantities = new();
+    private string _searchTerm = "";
+    private bool _onlyVegetarian = false;
+
+    private List<Pizza> filteredPizzas => pizzas?
+        .Where(p => string.IsNullOrWhiteSpace(_searchTerm) ||
+                    p.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    p.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+        .Where(p => !_onlyVegetarian || p.IsVegetarian)
+        .ToList() ?? new List<Pizza>();
 
     protected override async Task OnInitializedAsync()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
         pizzas = await db.Pizzas.ToListAsync();
-
         foreach (var pizza in pizzas)
             quantities[pizza.Id] = 1;
     }
@@ -85,15 +104,22 @@
 
     private void IncrementQuantity(int id)
     {
-        var current = GetQuantity(id);
-        if (current < 99) quantities[id] = current + 1;
+        if (GetQuantity(id) < 99)
+            quantities[id] = GetQuantity(id) + 1;
     }
 
     private void DecrementQuantity(int id)
     {
-        var current = GetQuantity(id);
-        if (current > 1) quantities[id] = current - 1;
+        if (GetQuantity(id) > 1)
+            quantities[id] = GetQuantity(id) - 1;
     }
+
+    private void OnVegetarianChanged(bool value)
+    {
+        _onlyVegetarian = value;
+        StateHasChanged();
+    }
+
 
     private void AddToCart(Pizza pizza)
     {
