@@ -1,6 +1,6 @@
 # Пиццерия "La pizza di Don Corleone"
 
-Веб-приложение для онлайн-заказа пиццы, напитков и десертов. Разработано на ASP.NET Core 8 + Blazor Server с использованием Entity Framework Core (SQLite), MudBlazor и Docker.
+Веб-приложение для Пиццерии. Разработано на ASP.NET Core 8 + Blazor Server с использованием Entity Framework Core (SQLite), MudBlazor и Docker.
 
 ## Функциональность
 
@@ -24,7 +24,7 @@
 
 1. Установите [.NET 8 SDK](https://dotnet.microsoft.com/download).
 2. Склонируйте репозиторий:  
-   `git clone <URL_репозитория>`
+   `git clone <https://github.com/luevb/WebPizzeriaOnBlazor.git>`
 3. Перейдите в папку проекта:  
    `cd BlazorPizzeria`
 4. Восстановите пакеты:  
