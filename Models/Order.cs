@@ -17,6 +17,7 @@ public class Order
     public string Address { get; set; } = string.Empty;
     public DateTime OrderDate { get; set; }
     public decimal TotalPrice { get; set; }
+    public string DeliveryType { get; set; } = "Delivery"; // "Delivery" или "Pickup"
     public string Status { get; set; } = "Pending";
 
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

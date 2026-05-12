@@ -1,7 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject CartService Cart
 
-@* Обязательные провайдеры MudBlazor для тем, диалогов, уведомлений и поповеров *@
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -20,7 +19,6 @@
             La pizza di Don Corleone - настоящая итальянская пицца!
         </MudText>
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
@@ -37,7 +35,7 @@
 @code {
     private bool _drawerOpen = true;
     private MudTheme _theme = new();
-    private bool _isDarkMode = true;
+    private bool _isDarkMode = false;
 
     protected override async Task OnInitializedAsync()
     {

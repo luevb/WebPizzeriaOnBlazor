@@ -1,6 +1,8 @@
 using BlazorPizzeria.Components;
 using BlazorPizzeria.Data;
 using BlazorPizzeria.Services;
+using BlazorPizzeria.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -8,12 +10,14 @@ using MudBlazor.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddRazorComponents()   
+    .AddInteractiveServerComponents();
+builder.Services.AddValidatorsFromAssemblyContaining<OrderValidator>();
 builder.Services.AddHttpClient<DadataService>();
 builder.Services.AddScoped<DadataService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<IPizzaRepository, PizzaRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddRazorComponents()   
-    .AddInteractiveServerComponents();
 builder.Services.AddMudServices();
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));

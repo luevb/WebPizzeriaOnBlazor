@@ -34,6 +34,31 @@ public class AppDbContext : DbContext
             .HasForeignKey(oi => oi.DessertId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<PizzaIngredient>()
+       .HasKey(pi => new { pi.PizzaId, pi.IngredientId });
+
+        modelBuilder.Entity<PizzaIngredient>()
+            .HasOne(pi => pi.Pizza)
+            .WithMany(p => p.PizzaIngredients)
+            .HasForeignKey(pi => pi.PizzaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PizzaIngredient>()
+            .HasOne(pi => pi.Ingredient)
+            .WithMany(i => i.PizzaIngredients)
+            .HasForeignKey(pi => pi.IngredientId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Ingredient>().HasData(
+            new Ingredient { Id = 1, Name = "Сыр моцарелла", ExtraPrice = 50m },
+            new Ingredient { Id = 2, Name = "Пепперони", ExtraPrice = 70m },
+            new Ingredient { Id = 3, Name = "Грибы", ExtraPrice = 40m }
+        );
+
+        modelBuilder.Entity<PizzaIngredient>().HasData(
+            new PizzaIngredient { PizzaId = 1, IngredientId = 1 }
+        );
+
         // Точность для цен
         modelBuilder.Entity<Pizza>().Property(p => p.Price).HasPrecision(18, 2);
         modelBuilder.Entity<Drink>().Property(d => d.Price).HasPrecision(18, 2);

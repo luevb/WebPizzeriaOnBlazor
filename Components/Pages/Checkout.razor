@@ -1,162 +1,142 @@
 ﻿@page "/checkout"
 @using BlazorPizzeria.Models
 @using BlazorPizzeria.Services
+@using BlazorPizzeria.Validators
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Microsoft.EntityFrameworkCore
-@using MudBlazor
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject CartService Cart
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
-@implements IDisposable
+@inject ProtectedSessionStorage SessionStorage
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
-    <MudText Typo="Typo.h4" Class="mb-4">📝 Оформление заказа</MudText>
+<h3>Оформление заказа</h3>
 
-    @if (Cart.Items.Count == 0)
-    {
-        <MudAlert Severity="Severity.Warning">
-            Корзина пуста. <MudLink Href="/menu/pizzas" Underline="Underline.Always">Перейти к меню</MudLink>
-        </MudAlert>
-    }
-    else
-    {
-        <MudGrid>
-            <MudItem xs="12" md="7">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="mb-3">Контактные данные</MudText>
+@if (Cart.Items.Count == 0)
+{
+    <div class="alert alert-warning">
+        Корзина пуста. <a href="/menu/pizzas">Перейти к меню</a>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Контактные данные</h5>
 
-                        <MudTextField @bind-Value="_customerName"
-                                      Label="Ваше имя"
-                                      Variant="@Variant.Outlined"
-                                      Required="true"
-                                      For="@(() => _customerName)" />
+                    <div class="mb-3">
+                        <label class="form-label">Ваше имя</label>
+                        <input @bind="customerName" class="form-control" />
+                    </div>
 
-                        <MudTextField @bind-Value="_phone"
-                                      Label="Телефон"
-                                      Variant="@Variant.Outlined"
-                                      Required="true"
-                                      HelperText="Только цифры и знаки +()- , например +7 (123) 456-78-90"
-                                      For="@(() => _phone)" />
+                    <div class="mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input @bind="phone" class="form-control" />
+                    </div>
 
-                        <MudAutocomplete T="string"
-                                         Label="Адрес доставки"
-                                         @bind-Value="_address"
-                                         SearchFunc="@SearchAddress"
-                                         Variant="@Variant.Outlined"
-                                         Required="true"
-                                         HelperText="Введите улицу и номер дома" />
+                    <div class="mb-3">
+                        <label class="form-label">Способ получения</label>
+                        <select @bind="deliveryType" class="form-select">
+                            <option value="Delivery">Доставка по Москве</option>
+                            <option value="Pickup">Самовывоз (бесплатно)</option>
+                        </select>
+                    </div>
 
-                        <MudButton Variant="@Variant.Filled"
-                                   Color="@Color.Primary"
-                                   FullWidth="true"
-                                   Class="mt-4"
-                                   OnClick="SubmitOrder">
-                            Подтвердить заказ
-                        </MudButton>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+                    @if (deliveryType == "Delivery")
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Адрес доставки</label>
+                            <input @bind="address" class="form-control" placeholder="г. Москва, улица, дом" />
+                            <small class="text-muted">Пример: г Москва, ул Тверская, д 1</small>
+                        </div>
+                    }
 
-            <MudItem xs="12" md="5">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="mb-3">Ваш заказ</MudText>
-                        <MudTable Items="@Cart.Items" Dense="true" Hover="true" Elevation="0">
-                            <HeaderContent>
-                                <MudTh>Товар</MudTh>
-                                <MudTh>Кол-во</MudTh>
-                                <MudTh>Сумма</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd>@context.Name</MudTd>
-                                <MudTd>@context.Quantity</MudTd>
-                                <MudTd>@(context.Price* context.Quantity) ₽</MudTd>
-                            </RowTemplate>
-                            <FooterContent>
-                                <MudTr>
-                                    <MudTd colspan="2"><strong>Итого:</strong></MudTd>
-                                    <MudTd><strong>@Cart.TotalPrice ₽</strong></MudTd>
-                                </MudTr>
-                            </FooterContent>
-                        </MudTable>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
-    }
-</MudContainer>
+                    <button class="btn btn-primary w-100" @onclick="SubmitOrder">Подтвердить заказ</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Ваш заказ</h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Товар</th><th>Кол-во</th><th>Сумма</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Cart.Items)
+                            {
+                                <tr>
+                                    <td>@item.Name</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@(item.Price * item.Quantity) ₽</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><th colspan="2">Итого:</th><th>@Cart.TotalPrice ₽</th></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    private string _customerName = "";
-    private string _phone = "";
-    private string _address = "";
+    private string customerName = "";
+    private string phone = "";
+    private string deliveryType = "Delivery";
+    private string address = "";
 
-    // Локальный список подсказок для адреса (можно расширить)
-    private readonly List<string> _addressSuggestions = new()
-    {
-        "г Москва, ул Тверская, д 1",
-        "г Москва, ул Арбат, д 10",
-        "г Москва, Ленинский пр-т, д 30",
-        "г Москва, ул 11-я Парковая, д 36",
-        "г Москва, ул Пушкина, д 5"
-    };
-
-    private async Task<IEnumerable<string>> SearchAddress(string value, CancellationToken token)
-    {
-        if (string.IsNullOrWhiteSpace(value) || value.Length < 2)
-            return new List<string>();
-        // Поиск похожих адресов
-        return _addressSuggestions.Where(a => a.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
-    }
-
-    protected override void OnInitialized()
-    {
-        Cart.OnChange += StateHasChanged;
-    }
-    private bool IsValidPhone(string phone)
-    {
-        if (string.IsNullOrWhiteSpace(phone)) return false;
-        // Удаляем все символы, кроме цифр
-        var digits = new string(phone.Where(char.IsDigit).ToArray());
-        // Допустимая длина номера (10-15 цифр, для России 11)
-        return digits.Length >= 10 && digits.Length <= 15;
-    }
-
-    private bool IsValidAddress(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address)) return false;
-        // Адрес должен содержать хотя бы одну цифру (номер дома) и букву (название улицы)
-        return address.Any(char.IsDigit) && address.Any(char.IsLetter);
-    }
-
+    /// <summary>
+    /// Обработчик отправки формы заказа.
+    /// </summary>
     private async Task SubmitOrder()
     {
-        // Простая ручная валидация
-        if (string.IsNullOrWhiteSpace(_customerName))
+        // --- Ручная валидация (быстрая, надёжная) ---
+        if (string.IsNullOrWhiteSpace(customerName))
         {
-            Snackbar.Add("Введите ваше имя", Severity.Warning);
+            Snackbar.Add("Введите ваше имя", MudBlazor.Severity.Warning);
             return;
         }
-        if (!IsValidPhone(_phone))
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+        if (digits.Length < 10 || digits.Length > 15)
         {
-            Snackbar.Add("Введите корректный номер телефона (10-15 цифр)", Severity.Warning);
+            Snackbar.Add("Введите корректный номер телефона (10-15 цифр)", MudBlazor.Severity.Warning);
             return;
         }
-        if (!IsValidAddress(_address))
+        if (deliveryType == "Delivery")
         {
-            Snackbar.Add("Укажите полный адрес (улица, дом)", Severity.Warning);
-            return;
-        }
-        if (!IsValidAddress(_address))
-        {
-            Snackbar.Add("Укажите полный адрес (улица, дом)", Severity.Warning);
-            return;
+            if (string.IsNullOrWhiteSpace(address))
+            {
+                Snackbar.Add("Укажите адрес доставки", MudBlazor.Severity.Warning);
+                return;
+            }
+            if (!address.ToLower().Contains("москва") && !address.ToLower().Contains("moscow"))
+            {
+                Snackbar.Add("Доставка осуществляется только по Москве", MudBlazor.Severity.Warning);
+                return;
+            }
         }
 
-        if (!IsMoscowAddress(_address))
+        // --- Демонстрация FluentValidation (дополнительная проверка) ---
+        var validator = new OrderValidator();
+        var orderToValidate = new Order
         {
-            Snackbar.Add("Доставка осуществляется только по Москве", Severity.Warning);
+            CustomerName = customerName,
+            Phone = phone,
+            Address = deliveryType == "Delivery" ? address : "Самовывоз",
+            DeliveryType = deliveryType
+        };
+        var validationResult = await validator.ValidateAsync(orderToValidate);
+        if (!validationResult.IsValid)
+        {
+            foreach (var error in validationResult.Errors)
+                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Warning);
             return;
         }
 
@@ -166,12 +146,14 @@
 
             var order = new Order
             {
-                CustomerName = _customerName,
-                Phone = _phone,
-                Address = _address,
+                CustomerName = customerName,
+                Phone = phone,
+                Address = deliveryType == "Delivery" ? address : "г. Москва, ул. Тверская, д. 1",
+                DeliveryType = deliveryType,
                 OrderDate = DateTime.Now,
                 TotalPrice = Cart.TotalPrice,
-                Status = "Pending"
+                Status = "Pending",
+                OrderItems = new List<OrderItem>()
             };
 
             foreach (var item in Cart.Items)
@@ -199,25 +181,14 @@
             db.Orders.Add(order);
             await db.SaveChangesAsync();
 
+            await SessionStorage.SetAsync("userPhone", order.Phone);
             Cart.Clear();
-            Snackbar.Add("Заказ оформлен! Перенаправление на оплату...", Severity.Success);
+            Snackbar.Add("Заказ оформлен! Перенаправление на оплату...", MudBlazor.Severity.Success);
             Navigation.NavigateTo($"/payment/{order.Id}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Ошибка при оформлении: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Ошибка: {ex.Message}", MudBlazor.Severity.Error);
         }
-    }
-
-    private bool IsMoscowAddress(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address)) return false;
-        var lower = address.ToLower();
-        return lower.Contains("москва") || lower.Contains("moscow");
-    }
-
-    public void Dispose()
-    {
-        Cart.OnChange -= StateHasChanged;
     }
 }

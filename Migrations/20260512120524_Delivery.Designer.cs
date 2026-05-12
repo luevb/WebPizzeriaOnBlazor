@@ -3,6 +3,7 @@ using System;
 using BlazorPizzeria.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorPizzeria.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512120524_Delivery")]
+    partial class Delivery
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -142,44 +145,6 @@ namespace BlazorPizzeria.Migrations
                         });
                 });
 
-            modelBuilder.Entity("BlazorPizzeria.Models.Ingredient", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("ExtraPrice")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Ingredient");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            ExtraPrice = 50m,
-                            Name = "Сыр моцарелла"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            ExtraPrice = 70m,
-                            Name = "Пепперони"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            ExtraPrice = 40m,
-                            Name = "Грибы"
-                        });
-                });
-
             modelBuilder.Entity("BlazorPizzeria.Models.OrderItem", b =>
                 {
                     b.Property<int>("Id")
@@ -216,28 +181,6 @@ namespace BlazorPizzeria.Migrations
                     b.HasIndex("PizzaId");
 
                     b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("BlazorPizzeria.Models.PizzaIngredient", b =>
-                {
-                    b.Property<int>("PizzaId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("IngredientId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("PizzaId", "IngredientId");
-
-                    b.HasIndex("IngredientId");
-
-                    b.ToTable("PizzaIngredient");
-
-                    b.HasData(
-                        new
-                        {
-                            PizzaId = 1,
-                            IngredientId = 1
-                        });
                 });
 
             modelBuilder.Entity("Order", b =>
@@ -447,25 +390,6 @@ namespace BlazorPizzeria.Migrations
                     b.Navigation("Pizza");
                 });
 
-            modelBuilder.Entity("BlazorPizzeria.Models.PizzaIngredient", b =>
-                {
-                    b.HasOne("BlazorPizzeria.Models.Ingredient", "Ingredient")
-                        .WithMany("PizzaIngredients")
-                        .HasForeignKey("IngredientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Pizza", "Pizza")
-                        .WithMany("PizzaIngredients")
-                        .HasForeignKey("PizzaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Ingredient");
-
-                    b.Navigation("Pizza");
-                });
-
             modelBuilder.Entity("BlazorPizzeria.Models.Dessert", b =>
                 {
                     b.Navigation("OrderItems");
@@ -476,11 +400,6 @@ namespace BlazorPizzeria.Migrations
                     b.Navigation("OrderItems");
                 });
 
-            modelBuilder.Entity("BlazorPizzeria.Models.Ingredient", b =>
-                {
-                    b.Navigation("PizzaIngredients");
-                });
-
             modelBuilder.Entity("Order", b =>
                 {
                     b.Navigation("OrderItems");
@@ -489,8 +408,6 @@ namespace BlazorPizzeria.Migrations
             modelBuilder.Entity("Pizza", b =>
                 {
                     b.Navigation("OrderItems");
-
-                    b.Navigation("PizzaIngredients");
                 });
 #pragma warning restore 612, 618
         }

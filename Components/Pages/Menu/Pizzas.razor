@@ -1,15 +1,14 @@
 ﻿@page "/menu/pizzas"
 @using BlazorPizzeria.Models
 @using BlazorPizzeria.Services
-@using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IPizzaRepository PizzaRepo
 @inject CartService Cart
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
     <MudText Typo="Typo.h4">🍕 Пицца</MudText>
 
-    <!-- Панель фильтрации -->
+    <!-- Панель фильтров -->
     <MudGrid>
         <MudItem xs="12" sm="8">
             <MudTextField @bind-Value="_searchTerm"
@@ -22,7 +21,7 @@
         </MudItem>
     </MudGrid>
 
-    @if (pizzas == null)
+    @if (filteredPizzas == null)
     {
         <MudProgressCircular Indeterminate />
     }
@@ -35,6 +34,7 @@
         <MudGrid>
             @foreach (var pizza in filteredPizzas)
             {
+                var quantity = Cart.GetQuantity("Pizza", pizza.Id);
                 <MudItem xs="12" sm="6" md="4" lg="3">
                     <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
                         @if (!string.IsNullOrEmpty(pizza.ImageUrl))
@@ -45,7 +45,7 @@
                             <MudText Typo="Typo.h6">@pizza.Name</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Tertiary">@pizza.Description</MudText>
                             <MudText Typo="Typo.subtitle1" Class="mt-2">
-                                @pizza.Price ₽
+                                @pizza.Price ₽ (@pizza.Size)
                                 @if (pizza.IsVegetarian)
                                 {
                                     <MudBadge Color="Color.Success" Class="ms-2">Вегетарианская</MudBadge>
@@ -55,20 +55,20 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.Remove"
                                                Size="Size.Small"
                                                Color="Color.Secondary"
-                                               OnClick="() => DecrementQuantity(pizza.Id)" />
+                                               OnClick="() => DecrementQuantity(pizza)" />
                                 <MudText Typo="Typo.body1" Class="mx-2" Style="min-width: 30px; text-align: center;">
-                                    @GetQuantity(pizza.Id)
+                                    @quantity
                                 </MudText>
                                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                                Size="Size.Small"
                                                Color="Color.Primary"
-                                               OnClick="() => IncrementQuantity(pizza.Id)" />
+                                               OnClick="() => IncreaseQuantity(pizza)" />
                             </div>
                         </MudCardContent>
                         <MudCardActions>
                             <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
                                        FullWidth="true"
-                                       OnClick="() => AddToCart(pizza)">
+                                       OnClick="() => AddToCart(pizza, quantity)">
                                 В корзину
                             </MudButton>
                         </MudCardActions>
@@ -81,7 +81,6 @@
 
 @code {
     private List<Pizza> pizzas = new();
-    private Dictionary<int, int> quantities = new();
     private string _searchTerm = "";
     private bool _onlyVegetarian = false;
 
@@ -94,37 +93,28 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        pizzas = await db.Pizzas.ToListAsync();
-        foreach (var pizza in pizzas)
-            quantities[pizza.Id] = 1;
-    }
-
-    private int GetQuantity(int id) => quantities.GetValueOrDefault(id, 1);
-
-    private void IncrementQuantity(int id)
-    {
-        if (GetQuantity(id) < 99)
-            quantities[id] = GetQuantity(id) + 1;
-    }
-
-    private void DecrementQuantity(int id)
-    {
-        if (GetQuantity(id) > 1)
-            quantities[id] = GetQuantity(id) - 1;
-    }
-
-    private void OnVegetarianChanged(bool value)
-    {
-        _onlyVegetarian = value;
+        pizzas = await PizzaRepo.GetAllAsync();
         StateHasChanged();
     }
 
-
-    private void AddToCart(Pizza pizza)
+    private void IncreaseQuantity(Pizza pizza)
     {
-        int qty = GetQuantity(pizza.Id);
-        Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, qty);
-        Snackbar.Add($"{pizza.Name} добавлена в корзину (x{qty})", Severity.Success);
+        int current = Cart.GetQuantity("Pizza", pizza.Id);
+        Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, 1);
+    }
+
+    private void DecrementQuantity(Pizza pizza)
+    {
+        int current = Cart.GetQuantity("Pizza", pizza.Id);
+        if (current > 1)
+            Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, -1);
+        else
+            Cart.RemoveItem("Pizza", pizza.Id);
+    }
+
+    private void AddToCart(Pizza pizza, int quantity)
+    {
+        Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, quantity);
+        Snackbar.Add($"{pizza.Name} добавлена в корзину (x{quantity})", Severity.Success);
     }
 }

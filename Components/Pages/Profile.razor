@@ -1,33 +1,125 @@
-﻿@page "/profile"
+﻿@page "/settings/profile"
+@using BlazorPizzeria.Models
+@using BlazorPizzeria.Services
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject ProtectedSessionStorage SessionStorage
+@inject ISnackbar Snackbar
 
-<MudCard>
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Мой профиль</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-    <MudCardContent>
-        @if (!string.IsNullOrEmpty(_profileImage))
-        {
-            <MudImage Class="mt-4" Src="@_profileImage" Style="width: 150px; height: 150px;" />
-        }
-        <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png" FilesChanged="UploadFile">
-            <ActivatorContent>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PhotoCamera">
-                    Загрузить фото профиля
-                </MudButton>
-            </ActivatorContent>
-        </MudFileUpload>
-    </MudCardContent>
-</MudCard>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="my-8">
+    <MudText Typo="Typo.h4" Class="mb-4">Профиль</MudText>
+
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h6">Ваш номер телефона</MudText>
+            @if (string.IsNullOrEmpty(_phoneNumber))
+            {
+                <MudTextField @bind-Value="_inputPhone" Label="Введите номер телефона" Variant="@Variant.Outlined" />
+                <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Class="mt-2" OnClick="SavePhoneNumber">Сохранить</MudButton>
+            }
+            else
+            {
+                <MudText>@_phoneNumber</MudText>
+                <MudButton Variant="@Variant.Text" Color="@Color.Secondary" OnClick="ClearPhoneNumber">Изменить</MudButton>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    @if (!string.IsNullOrEmpty(_phoneNumber))
+    {
+        <MudCard Class="mt-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6">Мои заказы</MudText>
+                @if (_orders == null)
+                {
+                    <MudProgressCircular Indeterminate />
+                }
+                else if (!_orders.Any())
+                {
+                    <MudAlert Severity="@Severity.Info">Заказов с этим номером не найдено.</MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@_orders" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>№</MudTh>
+                            <MudTh>Дата</MudTh>
+                            <MudTh>Сумма</MudTh>
+                            <MudTh>Статус</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Id</MudTd>
+                            <MudTd>@context.OrderDate.ToShortDateString()</MudTd>
+                            <MudTd>@context.TotalPrice ₽</MudTd>
+                            <MudTd>@GetStatusText(context.Status)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
 
 @code {
-    private string _profileImage;
+    private string _phoneNumber = "";
+    private string _inputPhone = "";
+    private List<Order>? _orders;
 
-    private async Task UploadFile(IBrowserFile file)
+    protected override async Task OnInitializedAsync()
     {
-        var buffer = new byte[file.Size];
-        await file.OpenReadStream().ReadAsync(buffer);
-        _profileImage = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
+        await LoadPhoneNumber();
+        if (!string.IsNullOrEmpty(_phoneNumber))
+            await LoadOrders();
     }
+
+    private async Task LoadPhoneNumber()
+    {
+        var result = await SessionStorage.GetAsync<string>("userPhone");
+        if (result.Success && result.Value != null)
+            _phoneNumber = result.Value;
+    }
+
+    private async Task SavePhoneNumber()
+    {
+        if (string.IsNullOrWhiteSpace(_inputPhone))
+        {
+            Snackbar.Add("Введите номер телефона", Severity.Warning);
+            return;
+        }
+        await SessionStorage.SetAsync("userPhone", _inputPhone);
+        _phoneNumber = _inputPhone;
+        _inputPhone = "";
+        await LoadOrders();
+        StateHasChanged();
+        Snackbar.Add("Номер сохранён", Severity.Success);
+    }
+
+    private async Task ClearPhoneNumber()
+    {
+        await SessionStorage.DeleteAsync("userPhone");
+        _phoneNumber = "";
+        _orders = null;
+        StateHasChanged();
+    }
+
+    private async Task LoadOrders()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _orders = await db.Orders
+            .Where(o => o.Phone == _phoneNumber)
+            .OrderByDescending(o => o.Id)
+            .ToListAsync();
+        StateHasChanged();
+    }
+
+    private static string GetStatusText(string status) => status switch
+    {
+        "Pending" => "Ожидает",
+        "InProgress" => "Готовится",
+        "Delivered" => "Доставляется",
+        "Completed" => "Выполнен",
+        "Cancelled" => "Отменён",
+        _ => status
+    };
 }

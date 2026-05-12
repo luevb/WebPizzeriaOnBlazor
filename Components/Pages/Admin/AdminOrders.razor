@@ -1,147 +1,221 @@
 ﻿@page "/admin/orders"
 @using BlazorPizzeria.Models
 @using BlazorPizzeria.Services
-@using Microsoft.EntityFrameworkCore
-@using MudBlazor
-@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IOrderRepository OrderRepo
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
-    <MudText Typo="Typo.h4" Class="mb-4">📋 Управление заказами</MudText>
+<h3>Управление заказами</h3>
 
-    @if (orders == null)
-    {
-        <MudProgressCircular Indeterminate />
-    }
-    else if (!orders.Any())
-    {
-        <MudAlert Severity="Severity.Info">Заказов пока нет.</MudAlert>
-    }
-    else
-    {
-        <MudTable Items="@orders" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="2">
-            <HeaderContent>
-                <MudTh>ID</MudTh>
-                <MudTh>Клиент</MudTh>
-                <MudTh>Телефон</MudTh>
-                <MudTh>Адрес</MudTh>
-                <MudTh>Дата</MudTh>
-                <MudTh>Сумма</MudTh>
-                <MudTh>Статус</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>@context.Id</MudTd>
-                <MudTd>@context.CustomerName</MudTd>
-                <MudTd>@context.Phone</MudTd>
-                <MudTd>@context.Address</MudTd>
-                <MudTd>@context.OrderDate.ToShortDateString()</MudTd>
-                <MudTd>@context.TotalPrice ₽</MudTd>
-                <MudTd>
-                    <MudSelect T="string" @bind-Value="@context.Status" Variant="@Variant.Outlined" Size="@Size.Small">
-                        <MudSelectItem Value="@("Pending")">Ожидает</MudSelectItem>
-                        <MudSelectItem Value="@("InProgress")">Готовится</MudSelectItem>
-                        <MudSelectItem Value="@("Delivered")">Доставляется</MudSelectItem>
-                        <MudSelectItem Value="@("Completed")">Выполнен</MudSelectItem>
-                        <MudSelectItem Value="@("Cancelled")">Отменён</MudSelectItem>
-                    </MudSelect>
-                </MudTd>
-                <MudTd>
-                    <MudButton Variant="@Variant.Text" Color="@Color.Primary" Size="@Size.Small" OnClick="@(() => UpdateStatus(context))">Сохранить</MudButton>
-                    <MudIconButton Icon="@Icons.Material.Filled.Info" Color="@Color.Primary" Size="@Size.Small" OnClick="@(() => ShowDetails(context))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
-</MudContainer>
+<div class="row mb-3">
+    <div class="col-md-3">
+        <label>Статус</label>
+        <select @bind="statusFilter" class="form-select">
+            <option value="All">Все</option>
+            <option value="Pending">Ожидает</option>
+            <option value="InProgress">Готовится</option>
+            <option value="Delivered">Доставляется</option>
+            <option value="Completed">Выполнен</option>
+            <option value="Cancelled">Отменён</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label>С даты</label>
+        <input type="date" @bind="fromDate" class="form-control" />
+    </div>
+    <div class="col-md-2">
+        <label>По дату</label>
+        <input type="date" @bind="toDate" class="form-control" />
+    </div>
+    <div class="col-md-3">
+        <label>Поиск (телефон / ID)</label>
+        <input @bind="searchTerm" class="form-control" placeholder="Введите номер телефона или ID" />
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary me-2" @onclick="LoadFilteredOrders">Применить</button>
+        <button class="btn btn-secondary" @onclick="ResetFilters">Сбросить</button>
+    </div>
+</div>
 
-<MudDialog @bind-IsVisible="_dialogVisible" Options="@_dialogOptions">
-    <Title>Детали заказа #@(_selectedOrder?.Id)</Title>
-    <Content>
-        @if (_selectedOrder != null)
-        {
-            <MudText Typo="Typo.h6">Клиент: @_selectedOrder.CustomerName</MudText>
-            <MudText>Телефон: @_selectedOrder.Phone</MudText>
-            <MudText>Адрес: @_selectedOrder.Address</MudText>
-            <MudText>Дата: @_selectedOrder.OrderDate</MudText>
-            <MudText>Статус: @_selectedOrder.Status</MudText>
-            <MudText Typo="Typo.h6" Class="mt-4">Состав заказа:</MudText>
-            <MudTable Items="@(_selectedOrder.OrderItems)" Dense="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Товар</MudTh>
-                    <MudTh>Кол-во</MudTh>
-                    <MudTh>Цена</MudTh>
-                    <MudTh>Сумма</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>@GetProductName(context)</MudTd>
-                    <MudTd>@context.Quantity</MudTd>
-                    <MudTd>@context.UnitPrice ₽</MudTd>
-                    <MudTd>@(context.Quantity * context.UnitPrice) ₽</MudTd>
-                </RowTemplate>
-                <FooterContent>
-                    <MudTr>
-                        <MudTd colspan="3"><strong>Итого:</strong></MudTd>
-                        <MudTd><strong>@_selectedOrder.TotalPrice ₽</strong></MudTd>
-                    </MudTr>
-                </FooterContent>
-            </MudTable>
-        }
-    </Content>
-    <Actions>
-        <MudButton Variant="@Variant.Filled" Color="@Color.Primary" OnClick="CloseDialog">Закрыть</MudButton>
-    </Actions>
-</MudDialog>
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Заказов сегодня</h5>
+                <p class="card-text display-6">@stats.TodayCount</p>
+                <small>Сумма: @stats.TodaySum ₽</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Заказов вчера</h5>
+                <p class="card-text display-6">@stats.YesterdayCount</p>
+                <small>Сумма: @stats.YesterdaySum ₽</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Всего заказов</h5>
+                <p class="card-text display-6">@stats.TotalCount</p>
+                <small>Сумма: @stats.TotalSum ₽</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Средний чек</h5>
+                <p class="card-text display-6">@stats.AverageCheck ₽</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (orders == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!orders.Any())
+{
+    <div class="alert alert-info">Заказов не найдено.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr><th>ID</th><th>Клиент</th><th>Телефон</th><th>Адрес</th><th>Дата</th><th>Сумма</th><th>Статус</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>@order.Id</td>
+                        <td>@order.CustomerName</td>
+                        <td>@order.Phone</td>
+                        <td>@order.Address</td>
+                        <td>@order.OrderDate.ToShortDateString()</td>
+                        <td>@order.TotalPrice ₽</td>
+                        <td>
+                            <select class="form-select form-select-sm" @onchange="@((ChangeEventArgs e) => { order.Status = e.Value.ToString(); UpdateStatus(order); })">
+                                <option value="Pending" selected="@(order.Status == "Pending")">Ожидает</option>
+                                <option value="InProgress" selected="@(order.Status == "InProgress")">Готовится</option>
+                                <option value="Delivered" selected="@(order.Status == "Delivered")">Доставляется</option>
+                                <option value="Completed" selected="@(order.Status == "Completed")">Выполнен</option>
+                                <option value="Cancelled" selected="@(order.Status == "Cancelled")">Отменён</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" @onclick="() => ShowDetails(order)">Детали</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Детали заказа (отображаются под таблицей) -->
+@if (selectedOrder != null)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <strong>Детали заказа #@selectedOrder.Id</strong>
+            <button class="btn-close float-end" @onclick="() => selectedOrder = null"></button>
+        </div>
+        <div class="card-body">
+            <p><strong>Клиент:</strong> @selectedOrder.CustomerName</p>
+            <p><strong>Телефон:</strong> @selectedOrder.Phone</p>
+            <p><strong>Адрес:</strong> @selectedOrder.Address</p>
+            <p><strong>Дата:</strong> @selectedOrder.OrderDate</p>
+            <p><strong>Статус:</strong> @selectedOrder.Status</p>
+            <h6>Состав заказа:</h6>
+            <table class="table table-sm">
+                <thead><tr><th>Товар</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead>
+                <tbody>
+                    @foreach (var item in selectedOrder.OrderItems)
+                    {
+                        <tr>
+                            <td>@GetProductName(item)</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice ₽</td>
+                            <td>@(item.Quantity * item.UnitPrice) ₽</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot><tr><th colspan="3">Итого</th><th>@selectedOrder.TotalPrice ₽</th></tr></tfoot>
+            </table>
+        </div>
+    </div>
+}
 
 @code {
     private List<Order> orders = new();
-    private Order? _selectedOrder;
-    private bool _dialogVisible;
-    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+    private Order? selectedOrder;
+    private string statusFilter = "All";
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private string searchTerm = "";
+
+    private StatsData stats = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadOrders();
+        await LoadFilteredOrders();
     }
 
-    private async Task LoadOrders()
+    private async Task LoadFilteredOrders()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        orders = await db.Orders
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Pizza)
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Drink)
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Dessert)
-            .OrderByDescending(o => o.Id)
-            .ToListAsync();
+        orders = await OrderRepo.GetFilteredOrdersAsync(
+            statusFilter == "All" ? null : statusFilter,
+            fromDate,
+            toDate,
+            string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm);
+        await LoadStats();
         StateHasChanged();
+    }
+
+    private async Task LoadStats()
+    {
+        var allOrders = await OrderRepo.GetAllAsync();
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+
+        var todayOrders = allOrders.Where(o => o.OrderDate.Date == today).ToList();
+        var yesterdayOrders = allOrders.Where(o => o.OrderDate.Date == yesterday).ToList();
+
+        stats.TodayCount = todayOrders.Count;
+        stats.TodaySum = todayOrders.Sum(o => o.TotalPrice);
+        stats.YesterdayCount = yesterdayOrders.Count;
+        stats.YesterdaySum = yesterdayOrders.Sum(o => o.TotalPrice);
+        stats.TotalCount = allOrders.Count;
+        stats.TotalSum = allOrders.Sum(o => o.TotalPrice);
+        stats.AverageCheck = stats.TotalCount > 0 ? (stats.TotalSum / stats.TotalCount) : 0;
+    }
+
+    private async Task ResetFilters()
+    {
+        statusFilter = "All";
+        fromDate = null;
+        toDate = null;
+        searchTerm = "";
+        await LoadFilteredOrders();
     }
 
     private async Task UpdateStatus(Order order)
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var dbOrder = await db.Orders.FindAsync(order.Id);
-        if (dbOrder != null)
-        {
-            dbOrder.Status = order.Status;
-            await db.SaveChangesAsync();
-            Snackbar.Add($"Статус заказа #{order.Id} изменён на '{order.Status}'", Severity.Info);
-            await LoadOrders(); // обновить список
-        }
+        await OrderRepo.UpdateStatusAsync(order.Id, order.Status);
+        Snackbar.Add($"Статус заказа #{order.Id} изменён на {order.Status}", MudBlazor.Severity.Info);
+        await LoadFilteredOrders();
     }
 
     private void ShowDetails(Order order)
     {
-        _selectedOrder = order;
-        _dialogVisible = true;
-    }
-
-    private void CloseDialog()
-    {
-        _dialogVisible = false;
-        _selectedOrder = null;
+        selectedOrder = order;
     }
 
     private string GetProductName(OrderItem item)
@@ -150,5 +224,16 @@
         if (item.Drink != null) return item.Drink.Name;
         if (item.Dessert != null) return item.Dessert.Name;
         return "Товар";
+    }
+
+    private class StatsData
+    {
+        public int TodayCount { get; set; }
+        public decimal TodaySum { get; set; }
+        public int YesterdayCount { get; set; }
+        public decimal YesterdaySum { get; set; }
+        public int TotalCount { get; set; }
+        public decimal TotalSum { get; set; }
+        public decimal AverageCheck { get; set; }
     }
 }
