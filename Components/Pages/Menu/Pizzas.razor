@@ -19,6 +19,13 @@
                           Immediate="true"
                           Clearable="true" />
         </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSwitch T="bool"
+                       Label="Только вегетарианские"
+                       Color="Color.Success"
+                       Checked="_onlyVegetarian"
+                       CheckedChanged="@((bool val) => { _onlyVegetarian = val; StateHasChanged(); })" />
+        </MudItem>
     </MudGrid>
 
     @if (filteredPizzas == null)
@@ -34,7 +41,7 @@
         <MudGrid>
             @foreach (var pizza in filteredPizzas)
             {
-                var quantity = Cart.GetQuantity("Pizza", pizza.Id);
+                var localQty = GetLocalQuantity(pizza.Id);
                 <MudItem xs="12" sm="6" md="4" lg="3">
                     <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
                         @if (!string.IsNullOrEmpty(pizza.ImageUrl))
@@ -55,20 +62,20 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.Remove"
                                                Size="Size.Small"
                                                Color="Color.Secondary"
-                                               OnClick="() => DecrementQuantity(pizza)" />
+                                               OnClick="() => DecrementLocalQuantity(pizza.Id)" />
                                 <MudText Typo="Typo.body1" Class="mx-2" Style="min-width: 30px; text-align: center;">
-                                    @quantity
+                                    @localQty
                                 </MudText>
                                 <MudIconButton Icon="@Icons.Material.Filled.Add"
                                                Size="Size.Small"
                                                Color="Color.Primary"
-                                               OnClick="() => IncreaseQuantity(pizza)" />
+                                               OnClick="() => IncrementLocalQuantity(pizza.Id)" />
                             </div>
                         </MudCardContent>
                         <MudCardActions>
                             <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
                                        FullWidth="true"
-                                       OnClick="() => AddToCart(pizza, quantity)">
+                                       OnClick="() => AddToCart(pizza, localQty)">
                                 В корзину
                             </MudButton>
                         </MudCardActions>
@@ -83,6 +90,7 @@
     private List<Pizza> pizzas = new();
     private string _searchTerm = "";
     private bool _onlyVegetarian = false;
+    private Dictionary<int, int> localQuantities = new();
 
     private List<Pizza> filteredPizzas => pizzas?
         .Where(p => string.IsNullOrWhiteSpace(_searchTerm) ||
@@ -91,30 +99,35 @@
         .Where(p => !_onlyVegetarian || p.IsVegetarian)
         .ToList() ?? new List<Pizza>();
 
+    private int GetLocalQuantity(int id) => localQuantities.GetValueOrDefault(id, 1);
+
+    private void IncrementLocalQuantity(int id)
+    {
+        var current = GetLocalQuantity(id);
+        if (current < 99) localQuantities[id] = current + 1;
+    }
+
+    private void DecrementLocalQuantity(int id)
+    {
+        var current = GetLocalQuantity(id);
+        if (current > 1) localQuantities[id] = current - 1;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         pizzas = await PizzaRepo.GetAllAsync();
+        // Инициализируем локальные количества единицами
+        foreach (var pizza in pizzas)
+            localQuantities.TryAdd(pizza.Id, 1);
         StateHasChanged();
-    }
-
-    private void IncreaseQuantity(Pizza pizza)
-    {
-        int current = Cart.GetQuantity("Pizza", pizza.Id);
-        Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, 1);
-    }
-
-    private void DecrementQuantity(Pizza pizza)
-    {
-        int current = Cart.GetQuantity("Pizza", pizza.Id);
-        if (current > 1)
-            Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, -1);
-        else
-            Cart.RemoveItem("Pizza", pizza.Id);
     }
 
     private void AddToCart(Pizza pizza, int quantity)
     {
+        if (quantity <= 0) return;
         Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, quantity);
         Snackbar.Add($"{pizza.Name} добавлена в корзину (x{quantity})", Severity.Success);
+        // После добавления сбрасываем локальное количество в 1 (опционально)
+        localQuantities[pizza.Id] = 1;
     }
 }

@@ -1,6 +1,8 @@
 ﻿@page "/checkout"
 @using BlazorPizzeria.Models
 @using BlazorPizzeria.Services
+@inject DadataService Dadata
+@using MudBlazor
 @using BlazorPizzeria.Validators
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Microsoft.EntityFrameworkCore
@@ -48,8 +50,16 @@ else
                     {
                         <div class="mb-3">
                             <label class="form-label">Адрес доставки</label>
-                            <input @bind="address" class="form-control" placeholder="г. Москва, улица, дом" />
-                            <small class="text-muted">Пример: г Москва, ул Тверская, д 1</small>
+                            <MudAutocomplete T="string"
+                                             @bind-Value="address"
+                                             SearchFunc="@SearchAddress"
+                                             Variant="@Variant.Outlined"
+                                             Placeholder="Начните вводить улицу и дом"
+                                             HelperText="Например, Москва, ул. Тверская, д. 1"
+                                             FullWidth="true"
+                                             DebounceInterval="300"
+                                             MinCharacters="3" />
+                            <small class="text-muted">Выберите адрес из подсказок</small>
                         </div>
                     }
 
@@ -92,6 +102,12 @@ else
     private string deliveryType = "Delivery";
     private string address = "";
 
+    private async Task<IEnumerable<string>> SearchAddress(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 3)
+            return new List<string>();
+        return await Dadata.SuggestAddressAsync(value);
+    }
     /// <summary>
     /// Обработчик отправки формы заказа.
     /// </summary>
