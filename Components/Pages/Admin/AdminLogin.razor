@@ -1,0 +1,41 @@
+﻿@page "/admin/login"
+@attribute [StreamRendering(false)]
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage SessionStorage
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+@inject ISnackbar Snackbar
+
+<h3>Вход в панель администратора</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" class="form-control" @bind="password" />
+                </div>
+                <button class="btn btn-primary" @onclick="Login">Войти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string AdminPassword => Config["Admin:Password"] ?? "admin123";
+    private string password = "";
+    private async Task Login()
+    {
+        if (password == AdminPassword)
+        {
+            await SessionStorage.SetAsync("IsAdmin", true);
+            Snackbar.Add("Доступ разрешён", MudBlazor.Severity.Success);
+            Navigation.NavigateTo("/admin/orders");
+        }
+        else
+        {
+            Snackbar.Add("Неверный пароль", MudBlazor.Severity.Error);
+        }
+    }
+}
