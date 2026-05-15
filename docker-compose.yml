@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   web:
-    image: donfias/img_pizzeria:1.2
+    image: donfias/img_pizzeria:1.4
     container_name: web_pizzeria
     ports:
       - "8020:8080"    

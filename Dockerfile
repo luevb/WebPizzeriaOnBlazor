@@ -20,7 +20,8 @@ RUN adduser --disabled-password --gecos '' appuser && \
     mkdir -p /app/data && \
     chown -R appuser:appuser /app
 
-# Переключаемся на безопасного пользователя
+USER root
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 USER appuser
 
 COPY --from=publish --chown=appuser:appuser /app/publish .
