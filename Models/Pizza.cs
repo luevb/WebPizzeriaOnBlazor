@@ -1,4 +1,5 @@
 ﻿using BlazorPizzeria.Models;
+using System.ComponentModel.DataAnnotations.Schema;
 
 public class Pizza
 {
@@ -7,7 +8,8 @@ public class Pizza
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Size { get; set; } = "Medium";
-    public bool IsVegetarian { get; set; }
+    [Column("Vegetarian")]
+    public bool Vegetarian { get; set; }
     public string? ImageUrl { get; set; }
 
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

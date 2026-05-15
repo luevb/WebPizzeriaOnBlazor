@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorPizzeria.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260512120524_Delivery")]
-    partial class Delivery
+    [Migration("20260515162522_NewInitial")]
+    partial class NewInitial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -145,6 +145,44 @@ namespace BlazorPizzeria.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BlazorPizzeria.Models.Ingredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ExtraPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Ingredient");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ExtraPrice = 50m,
+                            Name = "Сыр моцарелла"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ExtraPrice = 70m,
+                            Name = "Пепперони"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ExtraPrice = 40m,
+                            Name = "Грибы"
+                        });
+                });
+
             modelBuilder.Entity("BlazorPizzeria.Models.OrderItem", b =>
                 {
                     b.Property<int>("Id")
@@ -181,6 +219,28 @@ namespace BlazorPizzeria.Migrations
                     b.HasIndex("PizzaId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("BlazorPizzeria.Models.PizzaIngredient", b =>
+                {
+                    b.Property<int>("PizzaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("IngredientId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PizzaId", "IngredientId");
+
+                    b.HasIndex("IngredientId");
+
+                    b.ToTable("PizzaIngredient");
+
+                    b.HasData(
+                        new
+                        {
+                            PizzaId = 1,
+                            IngredientId = 1
+                        });
                 });
 
             modelBuilder.Entity("Order", b =>
@@ -236,9 +296,6 @@ namespace BlazorPizzeria.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsVegetarian")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -251,6 +308,10 @@ namespace BlazorPizzeria.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Vegetarian")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("Vegetarian");
+
                     b.HasKey("Id");
 
                     b.ToTable("Pizzas");
@@ -261,100 +322,100 @@ namespace BlazorPizzeria.Migrations
                             Id = 1,
                             Description = "Томатный соус, свежая моцарелла, душистый базилик, оливковое масло extra virgin.",
                             ImageUrl = "/images/pizzas/margherita.jpg",
-                            IsVegetarian = true,
                             Name = "Маргарита",
                             Price = 490m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = true
                         },
                         new
                         {
                             Id = 2,
                             Description = "Сливочный соус и смесь из моцареллы, пармезана, горгонзолы, фонтана.",
                             ImageUrl = "/images/pizzas/quattro_formaggi.jpg",
-                            IsVegetarian = true,
                             Name = "Четыре сыра",
                             Price = 620m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = true
                         },
                         new
                         {
                             Id = 3,
                             Description = "Артишоки (весна), оливки и томаты (лето), прошутто или грибы (осень), моцарелла (зима).",
                             ImageUrl = "/images/pizzas/quattro_stagioni.jpg",
-                            IsVegetarian = false,
                             Name = "Четыре сезона",
                             Price = 680m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 4,
                             Description = "Моцарелла, томаты, прошутто или ветчина, артишоки, шампиньоны, оливки.",
                             ImageUrl = "/images/pizzas/capricciosa.jpg",
-                            IsVegetarian = false,
                             Name = "Капричоза",
                             Price = 670m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 5,
                             Description = "Салями, халапеньо, томатный соус, сыр — дьявольски острая.",
                             ImageUrl = "/images/pizzas/diavola.jpg",
-                            IsVegetarian = false,
                             Name = "Дьябола",
                             Price = 650m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 6,
                             Description = "Курица, сыр и сочные кусочки ананаса — сладко-солёная классика.",
                             ImageUrl = "/images/pizzas/hawaiian.jpg",
-                            IsVegetarian = false,
                             Name = "Гавайская",
                             Price = 610m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 7,
                             Description = "Сладкий перец, цуккини, баклажаны, шампиньоны, томаты, маслины — полезно и сытно.",
                             ImageUrl = "/images/pizzas/vegetariana.jpg",
-                            IsVegetarian = true,
                             Name = "Вегетарианская",
                             Price = 560m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = true
                         },
                         new
                         {
                             Id = 8,
                             Description = "Закрытая пицца с рикоттой, моцареллой, прошутто или грибами в тонком хрустящем тесте.",
                             ImageUrl = "/images/pizzas/calzone.jpg",
-                            IsVegetarian = false,
                             Name = "Кальцоне",
                             Price = 640m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 9,
                             Description = "Вяленые томаты, пармезан, копчёная паприка — наш секретный рецепт.",
                             ImageUrl = "/images/pizzas/signature.jpg",
-                            IsVegetarian = false,
                             Name = "Пицца Дон (фирменная)",
                             Price = 720m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         },
                         new
                         {
                             Id = 10,
                             Description = "Прошутто крудо, пармезан, руккола, вяленые томаты, бальзамический крем.",
                             ImageUrl = "/images/pizzas/parmense.jpg",
-                            IsVegetarian = false,
                             Name = "Пармская",
                             Price = 750m,
-                            Size = "Medium"
+                            Size = "Medium",
+                            Vegetarian = false
                         });
                 });
 
@@ -390,6 +451,25 @@ namespace BlazorPizzeria.Migrations
                     b.Navigation("Pizza");
                 });
 
+            modelBuilder.Entity("BlazorPizzeria.Models.PizzaIngredient", b =>
+                {
+                    b.HasOne("BlazorPizzeria.Models.Ingredient", "Ingredient")
+                        .WithMany("PizzaIngredients")
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pizza", "Pizza")
+                        .WithMany("PizzaIngredients")
+                        .HasForeignKey("PizzaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ingredient");
+
+                    b.Navigation("Pizza");
+                });
+
             modelBuilder.Entity("BlazorPizzeria.Models.Dessert", b =>
                 {
                     b.Navigation("OrderItems");
@@ -400,6 +480,11 @@ namespace BlazorPizzeria.Migrations
                     b.Navigation("OrderItems");
                 });
 
+            modelBuilder.Entity("BlazorPizzeria.Models.Ingredient", b =>
+                {
+                    b.Navigation("PizzaIngredients");
+                });
+
             modelBuilder.Entity("Order", b =>
                 {
                     b.Navigation("OrderItems");
@@ -408,6 +493,8 @@ namespace BlazorPizzeria.Migrations
             modelBuilder.Entity("Pizza", b =>
                 {
                     b.Navigation("OrderItems");
+
+                    b.Navigation("PizzaIngredients");
                 });
 #pragma warning restore 612, 618
         }

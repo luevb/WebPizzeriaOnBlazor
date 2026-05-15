@@ -1,35 +1,27 @@
 ﻿using FluentValidation;
 using BlazorPizzeria.Models;
+using System.Text.RegularExpressions;
 
 namespace BlazorPizzeria.Validators;
 
 public class OrderValidator : AbstractValidator<Order>
 {
+    private static readonly Regex PhoneRegex = new(@"^\+7\d{10}$", RegexOptions.Compiled);
+    private static readonly Regex NameRegex = new(@"^[a-zA-Zа-яА-ЯёЁ\s\-']+$", RegexOptions.Compiled);
+
     public OrderValidator()
     {
         RuleFor(o => o.CustomerName)
             .NotEmpty().WithMessage("Введите ваше имя")
-            .Length(2, 100).WithMessage("Имя должно быть от 2 до 100 символов");
+            .Length(2, 100).WithMessage("Имя должно содержать от 2 до 100 символов")
+            .Matches(NameRegex).WithMessage("Имя может содержать только буквы, пробелы, дефис и апостроф");
 
         RuleFor(o => o.Phone)
             .NotEmpty().WithMessage("Введите номер телефона")
-            .Must(BeValidPhone).WithMessage("Введите корректный номер телефона (10-15 цифр)");
+            .Matches(PhoneRegex).WithMessage("Номер телефона должен быть в формате +7XXXXXXXXXX (10 цифр после +7)");
 
         RuleFor(o => o.Address)
-            .Must((order, address) => BeValidAddressOrder(order, address))
-            .WithMessage("Укажите полный адрес (улица, дом)");
-    }
-
-    private bool BeValidPhone(string phone)
-    {
-        if (string.IsNullOrWhiteSpace(phone)) return false;
-        var digits = new string(phone.Where(char.IsDigit).ToArray());
-        return digits.Length >= 10 && digits.Length <= 15;
-    }
-
-    private bool BeValidAddressOrder(Order order, string address)
-    {
-        if (order.DeliveryType == "Pickup") return true;
-        return !string.IsNullOrWhiteSpace(address) && address.Any(char.IsDigit) && address.Any(char.IsLetter);
+            .Must((order, address) => order.DeliveryType != "Delivery" || !string.IsNullOrWhiteSpace(address))
+            .WithMessage("Укажите адрес доставки");
     }
 }

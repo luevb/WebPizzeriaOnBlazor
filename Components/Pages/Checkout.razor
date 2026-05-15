@@ -6,6 +6,7 @@
 @using BlazorPizzeria.Validators
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject CartService Cart
 @inject NavigationManager Navigation
@@ -30,12 +31,12 @@ else
 
                     <div class="mb-3">
                         <label class="form-label">Ваше имя</label>
-                        <input @bind="customerName" class="form-control" />
+                        <input @bind="customerName" class="form-control" pattern="[A-Za-zА-Яа-яЁё\s\-']+" title="Только буквы, пробелы, дефис и апостроф" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Телефон</label>
-                        <input @bind="phone" class="form-control" />
+                        <input @bind="phone" class="form-control" pattern="\+7[0-9]{10}" title="Введите +7 и 10 цифр" inputmode="numeric" placeholder="+79001234567" />
                     </div>
 
                     <div class="mb-3">
@@ -108,38 +109,50 @@ else
             return new List<string>();
         return await Dadata.SuggestAddressAsync(value);
     }
-    /// <summary>
-    /// Обработчик отправки формы заказа.
-    /// </summary>
+
     private async Task SubmitOrder()
     {
-        // --- Ручная валидация (быстрая, надёжная) ---
+        // 1. Проверка имени
         if (string.IsNullOrWhiteSpace(customerName))
         {
-            Snackbar.Add("Введите ваше имя", MudBlazor.Severity.Warning);
+            Snackbar.Add("Введите ваше имя", Severity.Warning);
             return;
         }
-        var digits = new string(phone.Where(char.IsDigit).ToArray());
-        if (digits.Length < 10 || digits.Length > 15)
+        var nameRegex = new Regex(@"^[a-zA-Zа-яА-ЯёЁ\s\-']+$");
+        if (!nameRegex.IsMatch(customerName))
         {
-            Snackbar.Add("Введите корректный номер телефона (10-15 цифр)", MudBlazor.Severity.Warning);
+            Snackbar.Add("Имя может содержать только буквы, пробелы, дефис и апостроф", Severity.Warning);
             return;
         }
+
+        // 2. Проверка телефона
+        var phoneRegex = new Regex(@"^\+7\d{10}$");
+        if (!phoneRegex.IsMatch(phone))
+        {
+            Snackbar.Add("Номер телефона должен быть в формате +7XXXXXXXXXX (10 цифр)", Severity.Warning);
+            return;
+        }
+
+        // 3. Проверка адреса при доставке (включая Москву)
         if (deliveryType == "Delivery")
         {
             if (string.IsNullOrWhiteSpace(address))
             {
-                Snackbar.Add("Укажите адрес доставки", MudBlazor.Severity.Warning);
+                Snackbar.Add("Укажите адрес доставки", Severity.Warning);
                 return;
             }
             if (!address.ToLower().Contains("москва") && !address.ToLower().Contains("moscow"))
             {
-                Snackbar.Add("Доставка осуществляется только по Москве", MudBlazor.Severity.Warning);
+                Snackbar.Add("Доставка осуществляется только по Москве", Severity.Warning);
                 return;
             }
         }
+        else
+        {
+            address = "г. Москва, ул. Тверская, д. 1";
+        }
 
-        // --- Демонстрация FluentValidation (дополнительная проверка) ---
+        // 4. FluentValidation (дополнительная проверка)
         var validator = new OrderValidator();
         var orderToValidate = new Order
         {
@@ -152,7 +165,7 @@ else
         if (!validationResult.IsValid)
         {
             foreach (var error in validationResult.Errors)
-                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Warning);
+                Snackbar.Add(error.ErrorMessage, Severity.Warning);
             return;
         }
 
@@ -199,12 +212,12 @@ else
 
             await SessionStorage.SetAsync("userPhone", order.Phone);
             Cart.Clear();
-            Snackbar.Add("Заказ оформлен! Перенаправление на оплату...", MudBlazor.Severity.Success);
+            Snackbar.Add("Заказ оформлен! Перенаправление на оплату...", Severity.Success);
             Navigation.NavigateTo($"/payment/{order.Id}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Ошибка: {ex.Message}", MudBlazor.Severity.Error);
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
 }

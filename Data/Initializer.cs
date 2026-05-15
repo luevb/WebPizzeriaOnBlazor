@@ -15,7 +15,7 @@ namespace BlazorPizzeria.Data
                     Description = "Томатный соус, свежая моцарелла, душистый базилик, оливковое масло extra virgin.",
                     Price = 490m,
                     Size = "Medium",
-                    IsVegetarian = true,
+                    Vegetarian = true,
                     ImageUrl = "/images/pizzas/margherita.jpg"
                 },
                 new Pizza
@@ -25,7 +25,7 @@ namespace BlazorPizzeria.Data
                     Description = "Сливочный соус и смесь из моцареллы, пармезана, горгонзолы, фонтана.",
                     Price = 620m,
                     Size = "Medium",
-                    IsVegetarian = true,
+                    Vegetarian = true,
                     ImageUrl = "/images/pizzas/quattro_formaggi.jpg"
                 },
                 new Pizza
@@ -35,7 +35,7 @@ namespace BlazorPizzeria.Data
                     Description = "Артишоки (весна), оливки и томаты (лето), прошутто или грибы (осень), моцарелла (зима).",
                     Price = 680m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/quattro_stagioni.jpg"
                 },
                 new Pizza
@@ -45,7 +45,7 @@ namespace BlazorPizzeria.Data
                     Description = "Моцарелла, томаты, прошутто или ветчина, артишоки, шампиньоны, оливки.",
                     Price = 670m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/capricciosa.jpg"
                 },
 
@@ -56,7 +56,7 @@ namespace BlazorPizzeria.Data
                     Description = "Салями, халапеньо, томатный соус, сыр — дьявольски острая.",
                     Price = 650m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/diavola.jpg"
                 },
                 new Pizza
@@ -66,7 +66,7 @@ namespace BlazorPizzeria.Data
                     Description = "Курица, сыр и сочные кусочки ананаса — сладко-солёная классика.",
                     Price = 610m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/hawaiian.jpg"
                 },
                 new Pizza
@@ -76,7 +76,7 @@ namespace BlazorPizzeria.Data
                     Description = "Сладкий перец, цуккини, баклажаны, шампиньоны, томаты, маслины — полезно и сытно.",
                     Price = 560m,
                     Size = "Medium",
-                    IsVegetarian = true,
+                    Vegetarian = true,
                     ImageUrl = "/images/pizzas/vegetariana.jpg"
                 },
                 new Pizza
@@ -86,7 +86,7 @@ namespace BlazorPizzeria.Data
                     Description = "Закрытая пицца с рикоттой, моцареллой, прошутто или грибами в тонком хрустящем тесте.",
                     Price = 640m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/calzone.jpg"
                 },
                 new Pizza
@@ -96,7 +96,7 @@ namespace BlazorPizzeria.Data
                     Description = "Вяленые томаты, пармезан, копчёная паприка — наш секретный рецепт.",
                     Price = 720m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/signature.jpg"
                 },
                 new Pizza
@@ -106,7 +106,7 @@ namespace BlazorPizzeria.Data
                     Description = "Прошутто крудо, пармезан, руккола, вяленые томаты, бальзамический крем.",
                     Price = 750m,
                     Size = "Medium",
-                    IsVegetarian = false,
+                    Vegetarian = false,
                     ImageUrl = "/images/pizzas/parmense.jpg"
                 }
             };

@@ -1,100 +1,83 @@
 ﻿@page "/menu/drink"
 @using BlazorPizzeria.Models
 @using BlazorPizzeria.Services
-@using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IDrinkRepository DrinkRepo
 @inject CartService Cart
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
-    <MudText Typo="Typo.h4">🥤 Напитки</MudText>
+<h3>🥤 Напитки</h3>
 
-    @if (drinks == null)
-    {
-        <MudProgressCircular Indeterminate />
-    }
-    else if (!drinks.Any())
-    {
-        <MudAlert Severity="Severity.Info">Напитки временно отсутствуют.</MudAlert>
-    }
-    else
-    {
-        <MudGrid>
-            @foreach (var drink in drinks)
-            {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
-                        @if (!string.IsNullOrEmpty(drink.ImageUrl))
-                        {
-                            <MudCardMedia Image="@drink.ImageUrl" Height="150" />
-                        }
-                        <MudCardContent>
-                            <MudText Typo="Typo.h6">@drink.Name</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">@drink.Description</MudText>
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">
-                                @drink.Price ₽
-                            </MudText>
+<div class="row mb-3">
+    <div class="col-md-6">
+        <input type="text" class="form-control" placeholder="Поиск по названию или описанию" @bind="_searchTerm" @bind:event="oninput" />
+    </div>
+</div>
 
-                            <!-- Кнопочный счётчик -->
-                            <div class="d-flex align-items-center justify-content-between mt-3">
-                                <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                               Size="Size.Small"
-                                               Color="Color.Secondary"
-                                               OnClick="() => DecrementQuantity(drink.Id)" />
-                                <MudText Typo="Typo.body1" Class="mx-2" Style="min-width: 30px; text-align: center;">
-                                    @GetQuantity(drink.Id)
-                                </MudText>
-                                <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                               Size="Size.Small"
-                                               Color="Color.Primary"
-                                               OnClick="() => IncrementQuantity(drink.Id)" />
-                            </div>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                       FullWidth="true"
-                                       OnClick="() => AddToCart(drink)">
-                                В корзину
-                            </MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
-    }
-</MudContainer>
+@if (drinks == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!drinks.Any())
+{
+    <div class="alert alert-info">Напитки не найдены.</div>
+}
+else
+{
+    var displayed = string.IsNullOrWhiteSpace(_searchTerm) ? drinks : drinks.Where(d => d.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) || d.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+    <div class="row">
+        @foreach (var drink in displayed)
+        {
+            var localQty = GetLocalQuantity(drink.Id);
+            <div class="col-md-4 col-lg-3 mb-4">
+                <div class="card h-100">
+                    @if (!string.IsNullOrEmpty(drink.ImageUrl))
+                    {
+                        <img src="@drink.ImageUrl" class="card-img-top" alt="@drink.Name" style="height: 150px; object-fit: cover;" />
+                    }
+                    <div class="card-body">
+                        <h5 class="card-title">@drink.Name</h5>
+                        <p class="card-text">@drink.Description</p>
+                        <p class="card-text"><strong>@drink.Price ₽</strong></p>
+                        <div class="d-flex align-items-center justify-content-between mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="() => DecrementLocalQuantity(drink.Id)">–</button>
+                            <span class="mx-2">@localQty</span>
+                            <button class="btn btn-outline-primary btn-sm" @onclick="() => IncrementLocalQuantity(drink.Id)">+</button>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary w-100" @onclick="() => AddToCart(drink, localQty)">В корзину</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
 
 @code {
     private List<Drink> drinks = new();
-    private Dictionary<int, int> quantities = new();
+    private string _searchTerm = "";
+    private Dictionary<int, int> localQuantities = new();
+
+    private int GetLocalQuantity(int id) => localQuantities.GetValueOrDefault(id, 1);
+    private void IncrementLocalQuantity(int id) => localQuantities[id] = Math.Min(GetLocalQuantity(id) + 1, 99);
+    private void DecrementLocalQuantity(int id)
+    {
+        var current = GetLocalQuantity(id);
+        if (current > 1) localQuantities[id] = current - 1;
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        drinks = await db.Drinks.ToListAsync();
-
-        foreach (var drink in drinks)
-            quantities[drink.Id] = 1;
+        drinks = await DrinkRepo.GetAllAsync();
+        foreach (var drink in drinks) localQuantities.TryAdd(drink.Id, 1);
+        StateHasChanged();
     }
 
-    private int GetQuantity(int id) => quantities.GetValueOrDefault(id, 1);
-
-    private void IncrementQuantity(int id)
+    private void AddToCart(Drink drink, int quantity)
     {
-        var current = GetQuantity(id);
-        if (current < 99) quantities[id] = current + 1;
-    }
-
-    private void DecrementQuantity(int id)
-    {
-        var current = GetQuantity(id);
-        if (current > 1) quantities[id] = current - 1;
-    }
-
-    private void AddToCart(Drink drink)
-    {
-        int qty = GetQuantity(drink.Id);
-        Cart.AddItem("Drink", drink.Id, drink.Name, drink.Price, qty);
-        Snackbar.Add($"{drink.Name} добавлен в корзину (x{qty})", Severity.Success);
+        if (quantity <= 0) return;
+        Cart.AddItem("Drink", drink.Id, drink.Name, drink.Price, quantity);
+        Snackbar.Add($"{drink.Name} добавлен в корзину (x{quantity})", Severity.Success);
+        localQuantities[drink.Id] = 1;
     }
 }

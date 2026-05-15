@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         // Настройка OrderItem: три внешних ключа, только один может быть ненулевым
         modelBuilder.Entity<OrderItem>()
             .HasOne(oi => oi.Pizza)

@@ -5,86 +5,67 @@
 @inject CartService Cart
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="my-8">
-    <MudText Typo="Typo.h4">🍕 Пицца</MudText>
+<div class="container my-4">
+    <h3>🍕 Пицца</h3>
 
-    <!-- Панель фильтров -->
-    <MudGrid>
-        <MudItem xs="12" sm="8">
-            <MudTextField @bind-Value="_searchTerm"
-                          Label="Поиск по названию или описанию"
-                          Variant="@Variant.Outlined"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true"
-                          Clearable="true" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudSwitch T="bool"
-                       Label="Только вегетарианские"
-                       Color="Color.Success"
-                       Checked="_onlyVegetarian"
-                       CheckedChanged="@((bool val) => { _onlyVegetarian = val; StateHasChanged(); })" />
-        </MudItem>
-    </MudGrid>
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <input type="text" class="form-control" @bind="_searchTerm" @bind:event="oninput" placeholder="Поиск по названию или описанию" />
+        </div>
+        <div class="col-md-4">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="vegCheckbox" @bind="_onlyVegetarian" />
+                <label class="form-check-label" for="vegCheckbox">Только вегетарианские</label>
+            </div>
+        </div>
+    </div>
 
-    @if (filteredPizzas == null)
+    @if (pizzas == null)
     {
-        <MudProgressCircular Indeterminate />
-    }
-    else if (!filteredPizzas.Any())
-    {
-        <MudAlert Severity="Severity.Info">Пиццы не найдены. Попробуйте изменить фильтры.</MudAlert>
+        <div class="text-center">Загрузка...</div>
     }
     else
     {
-        <MudGrid>
-            @foreach (var pizza in filteredPizzas)
-            {
-                var localQty = GetLocalQuantity(pizza.Id);
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="2" Class="d-flex flex-column" Style="height: 100%">
-                        @if (!string.IsNullOrEmpty(pizza.ImageUrl))
-                        {
-                            <MudCardMedia Image="@pizza.ImageUrl" Height="150" />
-                        }
-                        <MudCardContent>
-                            <MudText Typo="Typo.h6">@pizza.Name</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">@pizza.Description</MudText>
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">
-                                @pizza.Price ₽ (@pizza.Size)
-                                @if (pizza.IsVegetarian)
+        var displayed = GetFilteredPizzas();
+        if (!displayed.Any())
+        {
+            <div class="alert alert-info">Пиццы не найдены. Попробуйте изменить фильтры.</div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var pizza in displayed)
+                {
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100">
+                            @if (!string.IsNullOrEmpty(pizza.ImageUrl))
+                            {
+                                <img src="@pizza.ImageUrl" class="card-img-top" style="height:150px; object-fit:cover;" />
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">@pizza.Name</h5>
+                                <p class="card-text">@pizza.Description</p>
+                                <p class="card-text"><strong>@pizza.Price ₽</strong> (@pizza.Size)</p>
+                                @if (pizza.Vegetarian)
                                 {
-                                    <MudBadge Color="Color.Success" Class="ms-2">Вегетарианская</MudBadge>
+                                    <span class="badge bg-success">Вегетарианская</span>
                                 }
-                            </MudText>
-                            <div class="d-flex align-items-center justify-content-between mt-3">
-                                <MudIconButton Icon="@Icons.Material.Filled.Remove"
-                                               Size="Size.Small"
-                                               Color="Color.Secondary"
-                                               OnClick="() => DecrementLocalQuantity(pizza.Id)" />
-                                <MudText Typo="Typo.body1" Class="mx-2" Style="min-width: 30px; text-align: center;">
-                                    @localQty
-                                </MudText>
-                                <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                               Size="Size.Small"
-                                               Color="Color.Primary"
-                                               OnClick="() => IncrementLocalQuantity(pizza.Id)" />
                             </div>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
-                                       FullWidth="true"
-                                       OnClick="() => AddToCart(pizza, localQty)">
-                                В корзину
-                            </MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+                            <div class="card-footer">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => DecrementLocalQuantity(pizza.Id)">-</button>
+                                    <span>@GetLocalQuantity(pizza.Id)</span>
+                                    <button class="btn btn-sm btn-primary" @onclick="() => IncrementLocalQuantity(pizza.Id)">+</button>
+                                    <button class="btn btn-sm btn-success" @onclick="() => AddToCart(pizza, GetLocalQuantity(pizza.Id))">В корзину</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
     }
-</MudContainer>
+</div>
 
 @code {
     private List<Pizza> pizzas = new();
@@ -92,21 +73,24 @@
     private bool _onlyVegetarian = false;
     private Dictionary<int, int> localQuantities = new();
 
-    private List<Pizza> filteredPizzas => pizzas?
-        .Where(p => string.IsNullOrWhiteSpace(_searchTerm) ||
-                    p.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    p.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
-        .Where(p => !_onlyVegetarian || p.IsVegetarian)
-        .ToList() ?? new List<Pizza>();
+    private List<Pizza> GetFilteredPizzas()
+    {
+        if (pizzas == null) return new List<Pizza>();
+        var query = pizzas.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+            query = query.Where(p => p.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                     p.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+        if (_onlyVegetarian)
+            query = query.Where(p => p.Vegetarian);
+        return query.ToList();
+    }
 
     private int GetLocalQuantity(int id) => localQuantities.GetValueOrDefault(id, 1);
-
     private void IncrementLocalQuantity(int id)
     {
         var current = GetLocalQuantity(id);
         if (current < 99) localQuantities[id] = current + 1;
     }
-
     private void DecrementLocalQuantity(int id)
     {
         var current = GetLocalQuantity(id);
@@ -116,7 +100,6 @@
     protected override async Task OnInitializedAsync()
     {
         pizzas = await PizzaRepo.GetAllAsync();
-        // Инициализируем локальные количества единицами
         foreach (var pizza in pizzas)
             localQuantities.TryAdd(pizza.Id, 1);
         StateHasChanged();
@@ -127,7 +110,6 @@
         if (quantity <= 0) return;
         Cart.AddItem("Pizza", pizza.Id, pizza.Name, pizza.Price, quantity);
         Snackbar.Add($"{pizza.Name} добавлена в корзину (x{quantity})", Severity.Success);
-        // После добавления сбрасываем локальное количество в 1 (опционально)
         localQuantities[pizza.Id] = 1;
     }
 }

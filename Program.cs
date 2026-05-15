@@ -18,10 +18,12 @@ builder.Services.AddScoped<DadataService>();
 builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<IPizzaRepository, PizzaRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IDessertRepository, DessertRepository>();
+builder.Services.AddScoped<IDrinkRepository, DrinkRepository>();
+builder.Services.AddScoped<CartService>();
 builder.Services.AddMudServices();
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddScoped<CartService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
